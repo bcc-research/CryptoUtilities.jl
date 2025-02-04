@@ -1,0 +1,115 @@
+import Random
+
+# Using SIMD for fast reinterpret. Julia's base `reinterpret` is insanely slow
+# in this particular case likely due to (in this case unnecessary) type safety
+# checks
+using SIMD
+import Base: *, +
+
+abstract type BinaryFieldElem end
+
+binary_val(x::T) where T <: BinaryFieldElem = x.value
+Base.zero(::T) where T <: BinaryFieldElem = T(0)
+Base.transpose(x::T) where T <: BinaryFieldElem = x
+Base.adjoint(x::T) where T <: BinaryFieldElem = x
+
+# Define a GF2^128 element of a binary field
+struct GF2_128Elem <: BinaryFieldElem
+    value::UInt128
+end
+Random.rand(rng::Random.AbstractRNG, ::Random.SamplerType{GF2_128Elem}) = GF2_128Elem(rand(rng, UInt128))
+
+irreducible_poly(::GF2_128Elem) = UInt128(0b10000111) # x^128 + x^7 + x^2 + x + 1, standard
+
+# Only works for ARM chips with crypto NEON extensions
+function carryless_mul(a::UInt64, b::UInt64)
+    pmull_res = Vec(ccall("llvm.aarch64.neon.pmull64",
+                          llvmcall,
+                          NTuple{16, VecElement{UInt8}},
+                          (UInt64,UInt64),
+                          a, b))
+
+    return reinterpret(UInt128, pmull_res)
+end
+
+function split_long(a::UInt128)
+    UInt64(a & typemax(UInt64)), UInt64(a >> 64)
+end
+
+function carryless_mul(a::UInt128, b::UInt128)
+    a_lo, a_hi = split_long(a)
+    b_lo, b_hi = split_long(b)
+
+    z0 = carryless_mul(a_lo, b_lo)
+    z1 = carryless_mul(a_lo ⊻ a_hi, b_lo ⊻ b_hi)
+    z2 = carryless_mul(a_hi, b_hi)
+
+    result_lo = z0
+    result_hi = z2
+    result_mid = z0 ⊻ z1 ⊻ z2
+
+    lo_bits = (result_mid << 64) ⊻ result_lo
+    hi_bits = result_hi ⊻ (result_mid >> 64)
+    
+    return (hi_bits, lo_bits)
+end
+
+# Can make generic, fine for now
+function reduce_once(a::NTuple{2, UInt128}, poly)
+    a_hi, a_lo = a
+    res_hi, res_lo = carryless_mul(a_hi, poly)
+
+    return (res_hi << 64, a_lo ⊻ res_lo)
+end
+
+function reduce_poly(a::NTuple{2, UInt128}, poly)
+    a = reduce_once(a, poly)
+    _, a_lo = reduce_once(a, poly)
+    return a_lo
+end
+
+function *(a::T, b::GF2_128Elem) where T <: BinaryFieldElem
+    a_upconv = convert(GF2_128Elem, a)
+    c_mul = carryless_mul(binary_val(a_upconv), binary_val(b))
+    return GF2_128Elem(reduce_poly(c_mul, irreducible_poly(b)))
+end
+
+function +(a::GF2_128Elem, b::GF2_128Elem)
+    GF2_128Elem(a.value ⊻ b.value)
+end
+
+struct GF2_16Elem <: BinaryFieldElem
+    value::UInt16
+end
+
+# Should SIMD this sometime using NEON, also should
+# make this a macro
+function Base.convert(::Type{GF2_128Elem}, v::GF2_16Elem)
+    a = v.value
+    output = UInt128(0)
+    for i in 1:16
+        curr_idx = (a >> (i-1)) & 1
+        output |= UInt128(curr_idx) << UInt128(8*(i-1))
+    end
+    
+    return GF2_128Elem(output)
+end
+
+Base.promote_rule(::Type{GF2_128Elem}, ::Type{GF2_16Elem}) = GF2_128Elem
+Base.promote_rule(::Type{GF2_16Elem}, ::Type{GF2_128Elem}) = GF2_128Elem
+
+struct GF2_8Elem <: BinaryFieldElem
+    value::UInt8
+end
+
+# Should SIMD this sometime using NEON
+function Base.convert(::Type{GF2_128Elem}, v::GF2_8Elem)
+    a = v.value
+    output = UInt128(0)
+    for i in 1:8
+        curr_idx = (a >> (i-1)) & 1
+        output |= UInt128(curr_idx) << UInt128(16*(i-1))
+    end
+    GF2_128Elem(output)
+end
+
