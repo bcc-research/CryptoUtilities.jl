@@ -6,18 +6,37 @@ import Random
 using SIMD
 import Base: *, +
 
-abstract type BinaryFieldElem end
+abstract type BinaryFieldElem <: Number end
+
+# | I 0 | | I D |
+# | I I | | 0 I |  *v
+#
+#
+# | I   D   |
+# | I D + I |
 
 binary_val(x::T) where T <: BinaryFieldElem = x.value
 Base.zero(::T) where T <: BinaryFieldElem = T(0)
+Base.zero(::Type{T}) where T <: BinaryFieldElem = T(0)
 Base.transpose(x::T) where T <: BinaryFieldElem = x
 Base.adjoint(x::T) where T <: BinaryFieldElem = x
+
+function *(a::Bool, b::T) where T <: BinaryFieldElem
+    a ? b : zero(b)
+end
+
+function *(a::T, M::UniformScaling{Bool}) where T <: BinaryFieldElem
+    M.λ ? UniformScaling(a) : UniformScaling(false)
+end
+
+export GF2_128Elem
 
 # Define a GF2^128 element of a binary field
 struct GF2_128Elem <: BinaryFieldElem
     value::UInt128
 end
 Random.rand(rng::Random.AbstractRNG, ::Random.SamplerType{GF2_128Elem}) = GF2_128Elem(rand(rng, UInt128))
+
 
 irreducible_poly(::GF2_128Elem) = UInt128(0b10000111) # x^128 + x^7 + x^2 + x + 1, standard
 
@@ -78,38 +97,35 @@ function +(a::GF2_128Elem, b::GF2_128Elem)
     GF2_128Elem(a.value ⊻ b.value)
 end
 
-struct GF2_16Elem <: BinaryFieldElem
-    value::UInt16
-end
+macro define_GF2_Elem(uint_size)
+    gf2_elem_type = Symbol("GF2_$(uint_size)Elem")
+    uint_type = Symbol("UInt$(uint_size)")
 
-# Should SIMD this sometime using NEON, also should
-# make this a macro
-function Base.convert(::Type{GF2_128Elem}, v::GF2_16Elem)
-    a = v.value
-    output = UInt128(0)
-    for i in 1:16
-        curr_idx = (a >> (i-1)) & 1
-        output |= UInt128(curr_idx) << UInt128(8*(i-1))
+    return quote
+        struct $(gf2_elem_type) <: BinaryFieldElem
+            value :: $(uint_type)
+        end
     end
-    
-    return GF2_128Elem(output)
 end
 
-Base.promote_rule(::Type{GF2_128Elem}, ::Type{GF2_16Elem}) = GF2_128Elem
-Base.promote_rule(::Type{GF2_16Elem}, ::Type{GF2_128Elem}) = GF2_128Elem
+export GF2_8Elem
+# Right now, just handle these by upconverting to GF2_128Elem
+@define_GF2_Elem 8
+@define_GF2_Elem 16
+@define_GF2_Elem 32
+@define_GF2_Elem 64
 
-struct GF2_8Elem <: BinaryFieldElem
-    value::UInt8
-end
-
-# Should SIMD this sometime using NEON
-function Base.convert(::Type{GF2_128Elem}, v::GF2_8Elem)
+function Base.convert(::Type{GF2_128Elem}, v::T) where T <: BinaryFieldElem
     a = v.value
+    # Should be constant, check decompilation
+    bit_size = 8*sizeof(v)
+    skip_size = div(128, bit_size)
+
     output = UInt128(0)
-    for i in 1:8
+    for i in 1:bit_size
         curr_idx = (a >> (i-1)) & 1
-        output |= UInt128(curr_idx) << UInt128(16*(i-1))
+        output |= UInt128(curr_idx) << UInt128(skip_size*(i-1))
     end
+
     GF2_128Elem(output)
 end
-
