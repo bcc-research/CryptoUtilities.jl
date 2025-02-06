@@ -53,3 +53,6 @@ function test()
     end
     return b
 end
+
+
+# XXX: Actually turn these into tests

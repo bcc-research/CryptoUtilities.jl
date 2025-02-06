@@ -52,12 +52,12 @@ function carryless_mul(a::UInt64, b::UInt64)
 end
 
 function split_long(a::UInt128)
-    UInt64(a & typemax(UInt64)), UInt64(a >> 64)
+    UInt64(a >> 64), UInt64(a & typemax(UInt64))
 end
 
 function carryless_mul(a::UInt128, b::UInt128)
-    a_lo, a_hi = split_long(a)
-    b_lo, b_hi = split_long(b)
+    a_hi, a_lo = split_long(a)
+    b_hi, b_lo = split_long(b)
 
     z0 = carryless_mul(a_lo, b_lo)
     z1 = carryless_mul(a_lo ⊻ a_hi, b_lo ⊻ b_hi)
@@ -78,7 +78,7 @@ function reduce_once(a::NTuple{2, UInt128}, poly)
     a_hi, a_lo = a
     res_hi, res_lo = carryless_mul(a_hi, poly)
 
-    return (res_hi << 64, a_lo ⊻ res_lo)
+    return (res_hi, a_lo ⊻ res_lo)
 end
 
 function reduce_poly(a::NTuple{2, UInt128}, poly)
@@ -97,6 +97,25 @@ function +(a::GF2_128Elem, b::GF2_128Elem)
     GF2_128Elem(a.value ⊻ b.value)
 end
 
+# XXX: Maybe should be a different type, but good enough for now.
+# Computes the divisor and remainder of a / b, interpreting
+# the bits as coefficients of a polyomial over F_2. Used for
+# inversion.
+function divrempoly_(a::UInt128, b::UInt128)
+    shift = leading_zeros(b)
+    curr_idx = 128
+    b <<= shift
+    q, r = UInt128(0), UInt128(0)
+    while shift >= 0
+        if curr_idx 
+        shift -= 1
+        end
+    end
+
+    return q, r
+end
+
+# --- Other elements of other sizes ---
 macro define_GF2_Elem(uint_size)
     gf2_elem_type = Symbol("GF2_$(uint_size)Elem")
     uint_type = Symbol("UInt$(uint_size)")
