@@ -5,13 +5,13 @@ function one_step_fft(v::Vector{GF2_128Elem}; twiddles) # v is of length 4, GF2_
     i10 = FFTMatrix(twiddles[2])*i0[1:2]
     i11 = FFTMatrix(twiddles[3])*i0[3:4]
 
-    i10, i11
+    i0
 end
 
 export FFTMatrix
 
 # 2length(D) x 2length(D)
-# [I λI]
+# [I   λI  ]
 # [I (λ+1)I]
 struct FFTMatrix3{T}
     λ::T
