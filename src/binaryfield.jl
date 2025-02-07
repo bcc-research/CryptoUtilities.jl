@@ -97,22 +97,28 @@ function +(a::GF2_128Elem, b::GF2_128Elem)
     GF2_128Elem(a.value ⊻ b.value)
 end
 
-# XXX: Maybe should be a different type, but good enough for now.
-# Computes the divisor and remainder of a / b, interpreting
-# the bits as coefficients of a polyomial over F_2. Used for
-# inversion.
-function divrempoly_(a::UInt128, b::UInt128)
+# XXX: Maybe should be a different type, but good enough for now.  Computes the
+# divisor and remainder of a / b, interpreting the bits as coefficients of a
+# polyomial over F_2. Used for inversion. Also assumes that (for now) things are
+# not silly i.e., that a isn't mostly zeros. Can be optimized in that case.
+function divrempoly(a::UInt128, b::UInt128)
     shift = leading_zeros(b)
-    curr_idx = 128
+    q = UInt128(0)
+
+    bit_post = UInt128(1) << UInt128(127)
     b <<= shift
-    q, r = UInt128(0), UInt128(0)
+
     while shift >= 0
-        if curr_idx 
-        shift -= 1
+        if (a & bit_post) != 0
+            q |= bit_post
+            a ⊻= b
         end
+        shift -= 1
+        b >>= 1
+        bit_post >>= 1
     end
 
-    return q, r
+    return q, a
 end
 
 # --- Other elements of other sizes ---
