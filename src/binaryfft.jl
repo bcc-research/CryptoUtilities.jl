@@ -2,6 +2,35 @@ using Base.Threads
 
 is_pow_2(n) = 2^(round(Int, log2(n))) == n
 
+export mul_inplace!
+
+"""
+    fft_twiddles!(v; twiddles, idx=1)
+
+Recursively apply twiddle factors to perform a Fast Fourier Transform (FFT) step in-place.
+
+This function is a recursive implementation of a portion of a Fast Fourier Transform
+algorithm, specifically designed to be used with pre-calculated twiddle factors.
+It operates in-place on the input vector `v`, modifying it directly.
+
+# Arguments
+- `v`: A vector to be transformed in-place. Must have a length that is a power of 2.
+- `twiddles`: A vector of pre-calculated twiddle factors. The structure and length
+  of `twiddles` should be consistent with the intended FFT algorithm.
+- `idx`: An index to select the appropriate twiddle factor from the `twiddles` vector
+  for the current step. Defaults to 1 for the initial call.
+
+# Keyword Arguments
+- `twiddles`:  Required, the collection of twiddle factors.
+- `idx`: Optional, the index into the twiddle factor collection, defaults to 1.
+
+# Notes
+- This function is designed to be used as a building block in a larger FFT implementation.
+- The length of `v` is expected to be a power of 2 for the FFT algorithm to function correctly.
+- The `idx` parameter is used to navigate the `twiddles` vector during the recursive calls,
+  effectively selecting the correct twiddle factors for each stage of the FFT.
+- The function modifies `v` in-place and does not return a new vector.
+"""
 function fft_twiddles!(v; twiddles, idx=1)
     if length(v) == 1
         return v
@@ -15,6 +44,48 @@ function fft_twiddles!(v; twiddles, idx=1)
     @views fft_twiddles!(v; twiddles, idx=2*idx+1)
 end
 
+"""
+    fft_twiddles_parallel!(v; twiddles, idx=1, thread_depth=nothing)
+
+Recursively apply twiddle factors in parallel to perform a Fast Fourier Transform (FFT) step in-place.
+
+This function is a parallel recursive implementation of a portion of a Fast Fourier Transform
+algorithm, designed to be used with pre-calculated twiddle factors. It operates
+in-place on the input vector `v`, modifying it directly, and leverages Julia's
+threading capabilities for parallel execution.
+
+# Arguments
+- `v`: A vector to be transformed in-place. Must have a length that is a power of 2.
+- `twiddles`: A vector of pre-calculated twiddle factors. The structure and length
+  of `twiddles` should be consistent with the intended FFT algorithm.
+- `idx`: An index to select the appropriate twiddle factor from the `twiddles` vector
+  for the current step. Defaults to 1 for the initial call.
+- `thread_depth`:  Controls the depth of parallel execution. If `nothing` (default), it is
+  set to `round(Int, log2(nthreads()))` at the first call.  In subsequent recursive calls,
+  it is decremented. When `thread_depth` reaches 0, the computation becomes serial,
+  falling back to the sequential `fft_twiddles!` logic for the base cases.
+
+# Keyword Arguments
+- `twiddles`:  Required, the collection of twiddle factors.
+- `idx`: Optional, the index into the twiddle factor collection, defaults to 1.
+- `thread_depth`: Optional, the depth of threading recursion. If not provided, it's
+  automatically determined based on the number of available threads.
+
+# Notes
+- This function is a parallel version of `fft_twiddles!` and is designed to exploit
+  multi-core processors for faster FFT computations, especially for larger input sizes.
+- The length of `v` is expected to be a power of 2 for the FFT algorithm to function correctly.
+- The `idx` parameter is used to navigate the `twiddles` vector during the recursive calls,
+  effectively selecting the correct twiddle factors for each stage of the FFT.
+- The `thread_depth` parameter is crucial for controlling the granularity of parallelism.
+  Setting it appropriately can help optimize performance by balancing threading overhead
+  with the benefits of parallel computation. A depth that is too high might lead to excessive
+  threading overhead, while a depth that is too low might not fully utilize available resources.
+- The function modifies `v` in-place and does not return a new vector.
+- If `thread_depth` is not explicitly provided in the initial call, the function will infer
+  a default value based on the number of available threads and log this setting for informational
+  purposes.
+"""
 function fft_twiddles_parallel!(v; twiddles, idx=1, thread_depth=nothing)
     if length(v) == 1
         return v
@@ -39,18 +110,59 @@ function fft_twiddles_parallel!(v; twiddles, idx=1, thread_depth=nothing)
     end
 end
 
-# Takes a vector `v` of even length and returns the
-# first and second halves (as views)
+"""
+    split_half(v)
+
+Splits a vector `v` into two halves.
+
+Given a vector `v`, this function divides it into two equal parts and returns
+them as two separate views.  If the length of `v` is `n`, the first view
+will contain elements from index 1 to `n/2`, and the second view will contain
+elements from index `n/2 + 1` to `n`.
+
+# Arguments
+- `v`: The input vector to be split.
+
+# Returns
+- A tuple containing two views of the input vector `v`. The first element
+  of the tuple is a view of the first half of `v`, and the second element
+  is a view of the second half of `v`.
+
+# Notes
+- This function returns views, not copies, of the original vector. This means
+  that modifications to the returned views will directly affect the original
+  vector `v`.
+- It is assumed that the length of `v` is an even number, or that integer division
+  (`div(n, 2)`) correctly represents the midpoint for the intended split.
+- This function is often used in divide-and-conquer algorithms, such as the
+  Fast Fourier Transform (FFT), where vectors are recursively split into halves.
+"""
 function split_half(v)
     n = length(v)
     n_div2 = div(n, 2)
     return @views v[1:n_div2], v[n_div2+1:end]
 end
 
-# Multiplies (in place!) the FFT matrix with twiddle
-# factor λ and vector `v`
-# [I   λI  ]
-# [I (λ+1)I]
+"""
+    mul_inplace!(v, λ)
+
+Multiply in-place the FFT matrix with twiddle factor `λ` and vector `v`.
+
+This function performs the following matrix-vector multiplication in-place:
+
+[u'] = [I   λI  ][u]
+[w'] = [I (λ+1)I][w]
+
+where `I` is an identity matrix of size `length(v) ÷ 2` and `v` is a vector
+partitioned into two halves `u` and `w` such that `v = [u; w]`.  The
+multiplication is performed in-place, modifying the input vector `v` directly.
+
+This operation is a step in the binary field FFT algorithm of XXX.
+
+# Arguments
+- `v`: A vector to be multiplied in-place. Modified upon function return.
+- `λ`: The twiddle factor, a scalar value used in the matrix multiplication.
+"""
 function mul_inplace!(v, λ)
     u, w = split_half(v)
     @views begin
