@@ -8,26 +8,11 @@ import Base: *, +
 
 abstract type BinaryFieldElem <: Number end
 
-# | I 0 | | I D |
-# | I I | | 0 I |  *v
-#
-#
-# | I   D   |
-# | I D + I |
-
 binary_val(x::T) where T <: BinaryFieldElem = x.value
 Base.zero(::T) where T <: BinaryFieldElem = T(0)
 Base.zero(::Type{T}) where T <: BinaryFieldElem = T(0)
 Base.transpose(x::T) where T <: BinaryFieldElem = x
 Base.adjoint(x::T) where T <: BinaryFieldElem = x
-
-function *(a::Bool, b::T) where T <: BinaryFieldElem
-    a ? b : zero(b)
-end
-
-function *(a::T, M::UniformScaling{Bool}) where T <: BinaryFieldElem
-    M.λ ? UniformScaling(a) : UniformScaling(false)
-end
 
 export GF2_128Elem
 
@@ -100,8 +85,10 @@ end
 # XXX: Maybe should be a different type, but good enough for now.  Computes the
 # divisor and remainder of a / b, interpreting the bits as coefficients of a
 # polyomial over F_2. Used for inversion. Also assumes that (for now) things are
-# not silly i.e., that a isn't mostly zeros. Can be optimized in that case.
+# not silly i.e., that `a` isn't mostly zeros. Can be optimized in that case.
 function divrempoly(a::UInt128, b::UInt128)
+    @assert b != 0
+
     shift = leading_zeros(b)
     q = UInt128(0)
 
@@ -120,6 +107,8 @@ function divrempoly(a::UInt128, b::UInt128)
 
     return q, a
 end
+
+# XXX: Implement egcd and inverse
 
 # --- Other elements of other sizes ---
 macro define_GF2_Elem(uint_size)
