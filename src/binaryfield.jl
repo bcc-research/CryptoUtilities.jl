@@ -93,22 +93,52 @@ function divrempoly(a::UInt128, b::UInt128)
     q = UInt128(0)
 
     bit_post = UInt128(1) << UInt128(127)
+    bit_post_div = UInt128(1) << shift
     b <<= shift
 
     while shift >= 0
         if (a & bit_post) != 0
-            q |= bit_post
+            q |= bit_post_div
             a ⊻= b
         end
         shift -= 1
         b >>= 1
         bit_post >>= 1
+        bit_post_div >>= 1
     end
 
     return q, a
 end
 
 # XXX: Implement egcd and inverse
+# r_{i} = q r_{i+1} + r_{i+2}
+# Binary field implies:
+# r_{i+2} = q r_{i+1} + r_{i}
+# Base case: r_n = 0 => g = r_{n-1}
+# g = t*r_1 + s*r_2
+# [r_i    ] = [q 1][r_{i+1}]
+# [r_{i+1}] = [1 0][r_{i+2}]
+# [r_i    ] = [q 1][qp 1][r_{i+2}]
+# [r_{i+1}] = [1 0][1  0][...]
+function egcd(r_1::UInt128, r_2::UInt128)
+    if r_2 == UInt128(0)
+        @assert r_1 != 0
+        return r_1, UInt128(1), UInt128(0)
+    else
+        q, r_3 = divrempoly(r_1, r_2)
+        g, x1, y1 = egcd(r_2, r_3)
+        _, mul_res = carryless_mul(q, y1)
+        return g, y1, mul_res ⊻ x1
+    end
+end
+
+# XXX: Still incorrect, finish up
+function inv(a::GF2_128Elem)
+    zeros_a = leading_zeros(a)
+    lin_out = (a << (zeros_a + 1)) ⊻ irreducible_poly(a)
+    _, a_inv, _ = egcd(a.value, lin_out)
+    return GF2_128Elem(a_inv)
+end
 
 # --- Other elements of other sizes ---
 macro define_GF2_Elem(uint_size)
