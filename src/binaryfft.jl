@@ -170,3 +170,15 @@ function mul_inplace!(v, λ)
         w .+= u
     end
 end
+
+function layer_0!(tw, beta, k)
+  # tw points to the second half of the array
+  for i in 1:2^(k-1)
+    l0i = beta
+    l0i += GF2_128Elem(bitreverse(UInt128(i)))
+    tw[i] = l0i
+  end
+
+  # s0(v0)
+  return GF2_128Elem(1)
+end

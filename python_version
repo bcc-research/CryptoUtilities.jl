@@ -1,0 +1,83 @@
+len(tw) = n 
+
+we are going to go layer by layer 
+and we populate with: n/2, n/4, n/8, ... 1 
+from the end 
+
+* * * * * * x 
+
+* * * * * x x 
+
+* * * x x x x 
+
+* x x x x x x 
+
+x x x x x x x
+
+si = len / 2 
+
+si = (len / 2 ) / 2
+
+
+
+
+# s_i(v_i) = (s_{i-1}(v_i))^2 - s_{i-1}(v_{i - 1})*s_{i-1}(v_i)
+# note that first two elemets of each layer are: 
+# s_i(beta), s_i(beta + v_{i + 1}) 
+# thus we can compute s_{i+1}(v_{i + 1}) as: 
+# Example: say we want to compute s2(v2)
+# s2(v2) = s1(v2)^2 - s1(v1)*s1(v2)
+# prev layer starts with: [s1(b), s1(b + v2), ...] 
+# so we can compute: s1(v2) = s1(b + v2) - s1(b) = s1(b) + s1(v2) - s1(b)
+def compute_s_at_root(prev_layer, s_prev_at_root): 
+    s_prev = prev_layer[1] - prev_layer[0] 
+    return next_s(s_prev, s_prev_at_root)
+
+def next_s(s_prev, s_prev_at_root): 
+    return s_prev*s_prev - s_prev_at_root*s_prev
+
+v1 v2 v3
+
+0 0 1 -> beta + v3 
+
+1 1 1 -> beta + v1 + v2 + v3 ~= beta + rev(binary_val)
+
+def layer_0(beta, k):         
+    l0 = []
+    for i in range(0, 2**(k-1)):
+        l0i = beta
+        l0i += F.from_integer(bin(reversed(bin(i)))) XX: not right
+        for (cnt, bit) in enumerate(bin(i)[::-1][:-2]):
+            if bit == '1':
+                l0i += F._cache.fetch_int(2**(cnt + 1))
+
+        l0.append(l0i)
+
+    s0_v0 = F(1)
+    return l0, s0_v0
+
+
+def layer_i(prev_layer, s_prev_at_root): 
+    li = []
+    for s_prev in prev_layer[::2]: 
+        lii = next_s(s_prev, s_prev_at_root)
+        li.append(lii)
+
+    s_at_root = compute_s_at_root(prev_layer, s_prev_at_root)
+    return li, s_at_root
+
+def compute_twiddles(beta, k): 
+    l0, s0_v0 = layer_0(beta, k)
+    tw = l0[:]
+
+    prev_layer = l0 
+    s_prev_at_root = s0_v0 
+    for i in range(1, k):
+        prev_layer, s_prev_at_root = layer_i(prev_layer, s_prev_at_root)
+
+        #scale before writing into tw 
+        s_prev_at_root_inv = s_prev_at_root.inverse() 
+        tmp = [v * s_prev_at_root_inv for v in prev_layer]
+        tw = tmp + tw
+
+    return tw
