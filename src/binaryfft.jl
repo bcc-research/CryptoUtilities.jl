@@ -171,14 +171,56 @@ function mul_inplace!(v, λ)
     end
 end
 
-function layer_0!(tw, beta, k)
-  # tw points to the second half of the array
+
+next_s(s_prev, s_prev_at_root) = s_prev*s_prev + s_prev_at_root*s_prev
+
+# s_i(v_i) = (s_{i-1}(v_i))^2 - s_{i-1}(v_{i - 1})*s_{i-1}(v_i)
+# note that first two elemets of each layer are: 
+# s_i(beta), s_i(beta + v_{i + 1}) 
+# thus we can compute s_{i+1}(v_{i + 1}) as: 
+# Example: say we want to compute s2(v2)
+# s2(v2) = s1(v2)^2 - s1(v1)*s1(v2)
+# prev layer starts with: [s1(b), s1(b + v2), ...] 
+# so we can compute: s1(v2) = s1(b + v2) - s1(b) = s1(b) + s1(v2) - s1(b)
+compute_s_at_root(prev_layer, s_prev_at_root) = next_s(prev_layer[2] + prev_layer[1], s_prev_at_root)
+
+function layer_0!(layer, beta, k)
   for i in 1:2^(k-1)
     l0i = beta
     l0i += GF2_128Elem(bitreverse(UInt128(i)))
-    tw[i] = l0i
+    layer[i] = l0i
   end
 
   # s0(v0)
   return GF2_128Elem(1)
+end
+
+function layer_i!(layer, layer_len, s_prev_at_root)
+  prev_layer_len = 2 * layer_len
+  s_at_root = compute_s_at_root(layer, s_prev_at_root)
+  for (idx, s_prev) in enumerate(layer[1:2:prev_layer_len])
+    layer[idx] = next_s(s_prev, s_prev_at_root)
+  end
+  return s_at_root
+end 
+
+function compute_twiddles(beta, k)
+  twiddles = Vector{GF2_128Elem}(undef, 2^k - 1)
+  layer = Vector{GF2_128Elem}(undef, 2^(k - 1))
+
+  write_at = 2^(k - 1)
+  s_prev_at_root = layer_0!(layer, beta, k)
+  twiddles[write_at:end] .= layer 
+
+  for _ in 1:(k - 1) 
+    write_at = div(write_at, 2)
+    # notice that layer_len = write_at 
+    layer_len = write_at
+    s_prev_at_root = layer_i!(layer, layer_len, s_prev_at_root)
+
+    s_inv = inv(s_prev_at_root)
+    twiddles[write_at:write_at+layer_len - 1] .= s_inv .* layer[0:layer_len]
+  end
+
+  return twiddles
 end
