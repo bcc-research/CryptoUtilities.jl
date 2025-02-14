@@ -124,7 +124,7 @@ function div_irreducible(a::UInt128)
     return (q0 ⊻ q, r)
 end
 
-# egcd(a, b) => t * a + s * b = gcd(a, b)
+# g, t, s = egcd(a, b) => t * a + s * b = g = gcd(a, b)
 # | via recursion: t' * b + s' * (a % b) = gcd(a, b)
 # | => t' * b + s' * (a + a/b * b)
 # | => s' * a + t' + (s' * a/b) * b = gcd(a, b)
@@ -144,6 +144,9 @@ end
 function inv(a::GF2_128Elem)
     q, r = div_irreducible(binary_val(a)) # p / a :: p = q*a + r 
     _, t, s = egcd(binary_val(a), r)
+    # t*a + s*r = 1 = t*a + s*(p-q*a)
+    # => (t-s*q)*a + s*p = 1
+    # => ^^^^^^^ is inv of a
     return GF2_128Elem(t) + GF2_128Elem(s)*GF2_128Elem(q)
 end
 
