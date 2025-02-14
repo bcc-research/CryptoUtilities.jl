@@ -124,27 +124,27 @@ function div_irreducible(a::UInt128)
     return (q0 ⊻ q, r)
 end
 
+# egcd(a, b) => t * a + s * b = gcd(a, b)
+# | via recursion: t' * b + s' * (a % b) = gcd(a, b)
+# | => t' * b + s' * (a + a/b * b)
+# | => s' * a + t' + (s' * a/b) b = gcd(a, b)
 function egcd(r_1::UInt128, r_2::UInt128)
     if r_2 == UInt128(0)
         @assert r_1 != 0
         return r_1, UInt128(1), UInt128(0)
     else
-        # q*r_1 +r_3 = r_2
         q, r_3 = divrempoly(r_1, r_2)
-        g, x1, y1 = egcd(r_2, r_3)
-        _, mul_res = carryless_mul(q, y1)
-        return g, y1, mul_res ⊻ x1
+        g, t, s = egcd(r_2, r_3)
+        _, qs = carryless_mul(q, s)
+        return g, s, qs ⊻ t
     end
 end
 
 
 function inv(a::GF2_128Elem)
     q, r = div_irreducible(binary_val(a)) # p / a :: p = q*a + r 
-    _, a_inv_d, r_inv_d = egcd(binary_val(a), r)
-    # a_inv_d*a + r_inv_d*r = 1 = a_inv_d*a + r_inv_d*(p-q*a)
-    # => (a_inv_d-r_inv_d*q)*a + r_inv_d*p = 1
-    # => ^^^^^^^^^^^^^^^^^^  is inv of a
-    return GF2_128Elem(a_inv_d) + GF2_128Elem(r_inv_d)*GF2_128Elem(q)
+    _, t, s = egcd(binary_val(a), r)
+    return GF2_128Elem(t) + GF2_128Elem(s)*GF2_128Elem(q)
 end
 
 # --- Other elements of other sizes ---
