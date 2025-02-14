@@ -187,44 +187,44 @@ next_s(s_prev, s_prev_at_root) = s_prev*s_prev + s_prev_at_root*s_prev
 compute_s_at_root(prev_layer, s_prev_at_root) = next_s(prev_layer[2] + prev_layer[1], s_prev_at_root)
 
 function layer_0!(layer, beta, k)
-  for i in 1:2^(k-1)
-    l0i = beta
-    l0i += GF2_128Elem((i-1) << 1)
-    layer[i] = l0i
-  end
+    for i in 1:2^(k-1)
+      l0i = beta
+      l0i += GF2_128Elem((i-1) << 1)
+      layer[i] = l0i
+    end
 
-  # s0(v0)
-  return GF2_128Elem(1)
+    # s0(v0)
+    return GF2_128Elem(1)
 end
 
 function layer_i!(layer, layer_len, s_prev_at_root)
-  prev_layer_len = 2 * layer_len
-  s_at_root = compute_s_at_root(layer, s_prev_at_root)
-  for (idx, s_prev) in enumerate(@views layer[1:2:prev_layer_len])
-    layer[idx] = next_s(s_prev, s_prev_at_root)
-  end
-  return s_at_root
+    prev_layer_len = 2 * layer_len
+    s_at_root = compute_s_at_root(layer, s_prev_at_root)
+    for (idx, s_prev) in enumerate(@views layer[1:2:prev_layer_len])
+      layer[idx] = next_s(s_prev, s_prev_at_root)
+    end
+    return s_at_root
 end 
 
 function compute_twiddles(beta, k)
-  twiddles = Vector{GF2_128Elem}(undef, 2^k - 1) # 1 2 3 4 5 6 7
-  layer = Vector{GF2_128Elem}(undef, 2^(k - 1))
+    twiddles = Vector{GF2_128Elem}(undef, 2^k - 1) # 1 2 3 4 5 6 7
+    layer = Vector{GF2_128Elem}(undef, 2^(k - 1))
 
-  write_at = 2^(k - 1)
-  s_prev_at_root = layer_0!(layer, beta, k)
-  @views twiddles[write_at:end] .= layer 
+    write_at = 2^(k - 1)
+    s_prev_at_root = layer_0!(layer, beta, k)
+    @views twiddles[write_at:end] .= layer 
 
-  for _ in 1:(k - 1) 
-    write_at >>= 1
-    # notice that layer_len = write_at 
-    layer_len = write_at
-    s_prev_at_root = layer_i!(layer, layer_len, s_prev_at_root)
+    for _ in 1:(k - 1) 
+      write_at >>= 1
+      # notice that layer_len = write_at 
+      layer_len = write_at
+      s_prev_at_root = layer_i!(layer, layer_len, s_prev_at_root)
 
-    s_inv = inv(s_prev_at_root)
-    @views @. twiddles[write_at:write_at+layer_len-1] = s_inv * layer[1:layer_len]
-  end
+      s_inv = inv(s_prev_at_root)
+      @views @. twiddles[write_at:write_at+layer_len-1] = s_inv * layer[1:layer_len]
+    end
 
-  return twiddles
+    return twiddles
 end
 
 is_pow_2(n) = 2^(round(Int, log2(n))) == n
@@ -232,12 +232,12 @@ is_pow_2(n) = 2^(round(Int, log2(n))) == n
 export fft!
 
 function fft!(v; twiddles=nothing, beta=nothing)
-  n = length(v)
-  @assert is_pow_2(n)
-  k = round(Int, log2(n))
+    n = length(v)
+    @assert is_pow_2(n)
+    k = round(Int, log2(n))
 
-  beta = isnothing(beta) ? GF2_128Elem(0) : beta
-  twiddles = isnothing(twiddles) ? compute_twiddles(beta, k) : twiddles
+    beta = isnothing(beta) ? GF2_128Elem(0) : beta
+    twiddles = isnothing(twiddles) ? compute_twiddles(beta, k) : twiddles
 
-  fft_twiddles_parallel!(v; twiddles)
+    fft_twiddles_parallel!(v; twiddles)
 end

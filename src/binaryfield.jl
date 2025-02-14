@@ -137,6 +137,9 @@ function egcd(r_1::UInt128, r_2::UInt128)
         g, t, s = egcd(r_2, r_3)
         _, qs = carryless_mul(q, s)
         return g, s, qs ⊻ t
+        g, x1, y1 = egcd(r_2, r_3)
+        _, mul_res = carryless_mul(q, y1)
+        return g, y1, mul_res ⊻ x1
     end
 end
 
