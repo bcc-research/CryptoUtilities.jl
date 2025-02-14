@@ -110,7 +110,7 @@ function divrempoly(a::UInt128, b::UInt128)
     return q, a
 end
 
-# when we compute irreducible / a then we have to be careful since irreducible requires more than 129 bits
+# when we compute irreducible / a then we have to be careful since irreducible requires more than 128 bits
 function div_irreducible(a::UInt128)
     @assert a != 0 
     irr_low = UInt128(0b10000111) # x^7 + x^2 + x + 1
@@ -127,7 +127,7 @@ end
 # egcd(a, b) => t * a + s * b = gcd(a, b)
 # | via recursion: t' * b + s' * (a % b) = gcd(a, b)
 # | => t' * b + s' * (a + a/b * b)
-# | => s' * a + t' + (s' * a/b) b = gcd(a, b)
+# | => s' * a + t' + (s' * a/b) * b = gcd(a, b)
 function egcd(r_1::UInt128, r_2::UInt128)
     if r_2 == UInt128(0)
         @assert r_1 != 0
