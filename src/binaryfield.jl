@@ -124,16 +124,6 @@ function div_irreducible(a::UInt128)
     return (q0 ⊻ q, r)
 end
 
-# XXX: Implement egcd and inverse
-# r_{i} = q r_{i+1} + r_{i+2}
-# Binary field implies:
-# r_{i+2} = q r_{i+1} + r_{i}
-# Base case: r_n = 0 => g = r_{n-1}
-# g = t*r_1 + s*r_2
-# [r_i    ] = [q 1][r_{i+1}]
-# [r_{i+1}] = [1 0][r_{i+2}]
-# [r_i    ] = [q 1][qp 1][r_{i+2}]
-# [r_{i+1}] = [1 0][1  0][...]
 function egcd(r_1::UInt128, r_2::UInt128)
     if r_2 == UInt128(0)
         @assert r_1 != 0
@@ -142,7 +132,7 @@ function egcd(r_1::UInt128, r_2::UInt128)
         # q*r_1 +r_3 = r_2
         q, r_3 = divrempoly(r_1, r_2)
         g, x1, y1 = egcd(r_2, r_3)
-        hi, mul_res = carryless_mul(q, y1)
+        _, mul_res = carryless_mul(q, y1)
         return g, y1, mul_res ⊻ x1
     end
 end
@@ -176,6 +166,7 @@ export GF2_8Elem
 @define_GF2_Elem 32
 @define_GF2_Elem 64
 
+# XXX: Make this fast via repeated squaring
 function Base.convert(::Type{GF2_128Elem}, v::T) where T <: BinaryFieldElem
     a = v.value
     # Should be constant, check decompilation
