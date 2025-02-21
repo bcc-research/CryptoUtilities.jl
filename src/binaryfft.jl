@@ -35,6 +35,20 @@ function fft_twiddles!(v; twiddles, idx=1)
     @views fft_twiddles!(v; twiddles, idx=2*idx+1)
 end
 
+# TODO: Add nice comments here
+function ifft_twiddles!(v; twiddles, idx=1)
+  if length(v) == 1
+    return v
+  end
+
+  h1, h2 = split_half(v)
+
+  @views ifft_twiddles!(h1; twiddles, idx=2*idx)
+  @views ifft_twiddles!(h2; twiddles, idx=2*idx+1)
+
+  ifft_matrix_inplace!(v, twiddles[idx])
+end
+
 """
     fft_twiddles_parallel!(v; twiddles, idx=1, thread_depth=nothing)
 
@@ -105,6 +119,7 @@ This operation is a step in the binary field FFT algorithm of XXX.
 - `v`: A vector to be multiplied in-place. Modified upon function return.
 - `λ`: The twiddle factor, a scalar value used in the matrix multiplication.
 """
+# TODO: Maybe we should rename this function to something more convenient
 function mul_inplace!(v, λ)
     u, w = split_half(v)
     @views begin
@@ -113,11 +128,21 @@ function mul_inplace!(v, λ)
     end
 end
 
+# TODO: Add nice comments here
+
+function ifft_matrix_inplace!(v, λ)
+  lo, hi = split_half(v)
+  @views begin
+    hi .+= lo 
+    @. l0 += λ*hi
+  end
+end
+
 
 next_s(s_prev, s_prev_at_root) = s_prev*s_prev + s_prev_at_root*s_prev
 
 # s_i(v_i) = (s_{i-1}(v_i))^2 - s_{i-1}(v_{i - 1})*s_{i-1}(v_i)
-# note that first two elemets of each layer are: 
+# note that first two elements of each layer are: 
 # s_i(beta), s_i(beta + v_{i + 1}) 
 # thus we can compute s_{i+1}(v_{i + 1}) as: 
 # Example: say we want to compute s2(v2)
@@ -180,4 +205,17 @@ function fft!(v; twiddles=nothing, beta=nothing)
     twiddles = isnothing(twiddles) ? compute_twiddles(beta, k) : twiddles
 
     fft_twiddles_parallel!(v; twiddles)
+end
+
+export ifft! 
+
+function ifft!(v; twiddles=nothing, beta=nothing)
+  n = length(v)
+  @assert is_pow_2(n)
+  k = round(Int, log2(n))
+
+  beta = isnothing(beta) ? GF2_128Elem(0) : beta
+  twiddles = isnothing(twiddles) ? compute_twiddles(beta, k) : twiddles
+
+  ifft_twiddles_parallel!(v; twiddles)
 end
