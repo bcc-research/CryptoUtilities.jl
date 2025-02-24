@@ -1,6 +1,6 @@
 using Base.Threads
 
-export mul_inplace!
+export fft!, ifft!
 
 """
     fft_twiddles!(v; twiddles, idx=1)
@@ -27,7 +27,7 @@ function fft_twiddles!(v; twiddles, idx=1)
         return v
     end
 
-    mul_inplace!(v, twiddles[idx])
+    fft_mul!(v, twiddles[idx])
     
     u, v = split_half(v)
 
@@ -46,7 +46,7 @@ function ifft_twiddles!(v; twiddles, idx=1)
   @views ifft_twiddles!(h1; twiddles, idx=2*idx)
   @views ifft_twiddles!(h2; twiddles, idx=2*idx+1)
 
-  ifft_matrix_inplace!(v, twiddles[idx])
+  ifft_mul!(v, twiddles[idx])
 end
 
 """
@@ -75,11 +75,11 @@ function fft_twiddles_parallel!(v; twiddles, idx=1, thread_depth=nothing)
         if thread_depth > 0
           @info "Setting thread depth to $thread_depth"
         else
-          @info "Setting thread depth to  (did you launch julia with `--threads [thread_count]`?)"
+          @info "Setting thread depth to 0 (did you launch julia with `--threads [thread_count]`?)"
         end
     end
 
-    mul_inplace!(v, twiddles[idx])
+    fft_mul!(v, twiddles[idx])
     
     u, v = split_half(v)
 
@@ -100,7 +100,7 @@ function split_half(v)
 end
 
 """
-    mul_inplace!(v, λ)
+    fft_mul!(v, λ)
 
 Multiply in-place the FFT matrix with twiddle factor `λ` and vector `v`.
 
@@ -120,7 +120,7 @@ This operation is a step in the binary field FFT algorithm of XXX.
 - `λ`: The twiddle factor, a scalar value used in the matrix multiplication.
 """
 # TODO: Maybe we should rename this function to something more convenient
-function mul_inplace!(v, λ)
+function fft_mul!(v, λ)
     u, w = split_half(v)
     @views begin
         @. u += λ*w
@@ -129,12 +129,11 @@ function mul_inplace!(v, λ)
 end
 
 # TODO: Add nice comments here
-
-function ifft_matrix_inplace!(v, λ)
+function ifft_mul!(v, λ)
   lo, hi = split_half(v)
   @views begin
-    hi .+= lo 
-    @. l0 += λ*hi
+    hi .+= lo
+    @. lo += λ*hi
   end
 end
 
@@ -171,10 +170,8 @@ function layer_i!(layer, layer_len, s_prev_at_root)
     return s_at_root
 end 
 
-function compute_twiddles(beta, k)
-    twiddles = Vector{GF2_128Elem}(undef, 2^k - 1) # 1 2 3 4 5 6 7
+function compute_twiddles!(twiddles, beta, k)
     layer = Vector{GF2_128Elem}(undef, 2^(k - 1))
-
     write_at = 2^(k - 1)
     s_prev_at_root = layer_0!(layer, beta, k)
     @views twiddles[write_at:end] .= layer 
@@ -188,13 +185,15 @@ function compute_twiddles(beta, k)
       s_inv = inv(s_prev_at_root)
       @views @. twiddles[write_at:write_at+layer_len-1] = s_inv * layer[1:layer_len]
     end
+end
+
+function compute_twiddles(beta, k)
+    twiddles = Vector{GF2_128Elem}(undef, 2^k - 1)
+
+    compute_twiddles!(twiddles, beta, k)
 
     return twiddles
 end
-
-is_pow_2(n) = 2^(round(Int, log2(n))) == n
-
-export fft!
 
 function fft!(v; twiddles=nothing, beta=nothing)
     n = length(v)
@@ -207,8 +206,6 @@ function fft!(v; twiddles=nothing, beta=nothing)
     fft_twiddles_parallel!(v; twiddles)
 end
 
-export ifft! 
-
 function ifft!(v; twiddles=nothing, beta=nothing)
   n = length(v)
   @assert is_pow_2(n)
@@ -217,5 +214,5 @@ function ifft!(v; twiddles=nothing, beta=nothing)
   beta = isnothing(beta) ? GF2_128Elem(0) : beta
   twiddles = isnothing(twiddles) ? compute_twiddles(beta, k) : twiddles
 
-  ifft_twiddles_parallel!(v; twiddles)
+  ifft_twiddles!(v; twiddles)
 end
