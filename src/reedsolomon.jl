@@ -1,39 +1,3 @@
-# def __init__(self, m, k): 
-# self.n = 2**m
-# self.k = k 
-
-# self.T = self.n - self.k 
-# assert(is_power_of_two(self.T))
-# self.t = int(log2(self.T))
-
-# self.dft_chunks = []
-# for i in range(1, self.n // self.T): 
-#     beta = F._cache.fetch_int(i * self.T)
-#     self.dft_chunks.append(DFT(self.t, beta))
-
-# self.last_dft = DFT(self.t, F._cache.fetch_int(0))
-
-# def split_vector(self, vec):
-# assert(len(vec) == self.k)
-# t = self.T
-# return [vec[i:i+t] for i in range(0, self.k, t)]
-
-# def add_vecs(self, v0, v1): 
-# assert(len(v0) == len(v1))
-# for i in range(len(v0)): 
-#     v0[i] += v1[i]
-
-# def encode(self, msg): 
-# msg_chunks = self.split_vector(msg) 
-
-# v0p = [F(0)] * self.T
-# for i in range(len(msg_chunks)):   
-#     self.add_vecs(v0p, self.dft_chunks[i].ifft(msg_chunks[i]))
-
-# v0 = self.last_dft.fft(v0p)
-
-# return v0 + msg
-
 mutable struct ReedSolomonEncoding{T <: BinaryFieldElem}
     deg::UInt
     log_block_length::UInt

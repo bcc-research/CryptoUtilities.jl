@@ -143,7 +143,7 @@ function egcd(r_1::UInt128, r_2::UInt128)
     end
 end
 
-
+# XXX: We should make these generic
 function inv(a::GF2_128Elem)
     q, r = div_irreducible(binary_val(a)) # p / a :: p = q*a + r 
     _, t, s = egcd(binary_val(a), r)
