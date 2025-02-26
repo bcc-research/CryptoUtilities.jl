@@ -170,29 +170,60 @@ function layer_i!(layer, layer_len, s_prev_at_root)
     return s_at_root
 end 
 
-function compute_twiddles!(twiddles, beta, k)
+# TODO: add comments how pi polynomials have a similar subspace structure as full F_2^m space 
+function precompute_basis_scalers_at_layer_k!(p, k, sk_at_vk)
+	current_len = 2^k 
+	p[current_len+1:2*current_len] .= sk_at_vk .* p[1:current_len]
+end
+
+function compute_twiddles!(twiddles, pis, beta, k)
     layer = Vector{GF2_128Elem}(undef, 2^(k - 1))
     write_at = 2^(k - 1)
     s_prev_at_root = layer_0!(layer, beta, k)
     @views twiddles[write_at:end] .= layer 
 
-    for _ in 1:(k - 1) 
-      write_at >>= 1
-      # notice that layer_len = write_at 
-      layer_len = write_at
-      s_prev_at_root = layer_i!(layer, layer_len, s_prev_at_root)
+	# initialize pis
+	pis[1] = GF2_128Elem(1)
+	pis[2] = GF2_128Elem(1)
 
-      s_inv = inv(s_prev_at_root)
-      @views @. twiddles[write_at:write_at+layer_len-1] = s_inv * layer[1:layer_len]
+    for _ in 1:(k - 1) 
+		write_at >>= 1
+		# notice that layer_len = write_at 
+		layer_len = write_at
+		s_prev_at_root = layer_i!(layer, layer_len, s_prev_at_root)
+
+		precompute_basis_scalers_at_layer_k!(pis, i, s_prev_at_root)
+
+		s_inv = inv(s_prev_at_root)
+		@views @. twiddles[write_at:write_at+layer_len-1] = s_inv * layer[1:layer_len]
     end
+end
+
+function short_from_long_tw(l_tw, n, k)
+	s_tw = Vector{GF2_128Elem}(undef, 2^(k - 1))
+	jump = 2^(n - k)
+	small_tw[1] = l_tw[jump]
+
+	idx = 2
+	for i in 1:k-1
+		jump *= 2
+		take = 2^i
+
+		s_tw[idx:idx + take - 1] .= l_tw[jump:jump + take - 1]
+		idx += take
+	end
+
+	return s_tw
 end
 
 function compute_twiddles(beta, k)
     twiddles = Vector{GF2_128Elem}(undef, 2^k - 1)
+	pis = Vector{GF2_128Elem}(undef, 2^k)
+	pis_inv = inv.(pis)
 
-    compute_twiddles!(twiddles, beta, k)
+    compute_twiddles!(twiddles, pis, beta, k)
 
-    return twiddles
+    return twiddles, pis, pis_inv
 end
 
 function fft!(v; twiddles=nothing, beta=nothing)
@@ -201,8 +232,9 @@ function fft!(v; twiddles=nothing, beta=nothing)
     k = round(Int, log2(n))
 
     beta = isnothing(beta) ? GF2_128Elem(0) : beta
-    twiddles = isnothing(twiddles) ? compute_twiddles(beta, k) : twiddles
+    twiddles, pis, pis_inv = isnothing(twiddles) ? compute_twiddles(beta, k) : twiddles
 
+	#TODO: just scale this array with pis
     fft_twiddles_parallel!(v; twiddles)
 end
 
@@ -214,5 +246,6 @@ function ifft!(v; twiddles=nothing, beta=nothing)
   beta = isnothing(beta) ? GF2_128Elem(0) : beta
   twiddles = isnothing(twiddles) ? compute_twiddles(beta, k) : twiddles
 
+  #TODO: just scale this array with pis_inv
   ifft_twiddles!(v; twiddles)
 end
