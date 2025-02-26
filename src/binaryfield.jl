@@ -1,10 +1,6 @@
-import Random
-
 # Using SIMD for fast reinterpret. Julia's base `reinterpret` is insanely slow
 # in this particular case likely due to (in this case unnecessary) type safety
 # checks
-using SIMD
-import Base: *, +
 
 abstract type BinaryFieldElem <: Number end
 
@@ -21,7 +17,6 @@ struct GF2_128Elem <: BinaryFieldElem
     value::UInt128
 end
 Random.rand(rng::Random.AbstractRNG, ::Random.SamplerType{GF2_128Elem}) = GF2_128Elem(rand(rng, UInt128))
-
 
 irreducible_poly(::GF2_128Elem) = UInt128(0b10000111) # x^128 + x^7 + x^2 + x + 1, standard
 
@@ -111,9 +106,8 @@ function divrempoly(a::UInt128, b::UInt128)
 end
 
 # when we compute irreducible / a then we have to be careful since irreducible requires more than 128 bits
-function div_irreducible(a::UInt128)
+function div_irreducible(a::UInt128, irr_low)
     @assert a != 0 
-    irr_low = UInt128(0b10000111) # x^7 + x^2 + x + 1
 
     shift = leading_zeros(a) + 1 
     q0 = UInt128(1) << shift
@@ -129,7 +123,7 @@ end
 # | => t' * b + s' * (a + a/b * b)
 # | => s' * a + t' + (s' * a/b) * b = gcd(a, b)
 function egcd(r_1::UInt128, r_2::UInt128)
-    if r_2 == UInt128(0)
+    if r_2 == 0
         @assert r_1 != 0
         return r_1, UInt128(1), UInt128(0)
     else
@@ -145,7 +139,7 @@ end
 
 # XXX: We should make these generic
 function inv(a::GF2_128Elem)
-    q, r = div_irreducible(binary_val(a)) # p / a :: p = q*a + r 
+    q, r = div_irreducible(binary_val(a), irreducible_poly(a)) # p / a :: p = q*a + r 
     _, t, s = egcd(binary_val(a), r)
     # t*a + s*r = 1 = t*a + s*(p-q*a)
     # => (t-s*q)*a + s*p = 1
@@ -160,7 +154,7 @@ macro define_GF2_Elem(uint_size)
 
     return quote
         struct $(gf2_elem_type) <: BinaryFieldElem
-            value :: $(uint_type)
+            value::$(uint_type)
         end
     end
 end
