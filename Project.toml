@@ -6,11 +6,13 @@ version = "0.1.0"
 [deps]
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+SHA = "ea8e919c-243c-51af-8825-aaa63cd721ce"
 SIMD = "fdea26ae-647d-5447-a871-4b548cad5224"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [compat]
 LinearAlgebra = "1.11.0"
 Random = "1.11.0"
+SHA = "0.7.0"
 SIMD = "3.7.1"
 Test = "1.11.0"

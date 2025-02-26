@@ -17,5 +17,7 @@ include("./reedsolomon.jl")
 
 # Other crypto stuff
 include("./merkletree.jl")
+include("./merkle_proofs.jl")
+
 
 end # module CelestiaProve
