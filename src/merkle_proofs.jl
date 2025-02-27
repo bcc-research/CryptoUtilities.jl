@@ -1,5 +1,4 @@
 # SHARED FUNCTIONS 
-
 function get_path(depth::Int, query::Int)
     path = Vector{Int}(undef, depth)
 
@@ -32,9 +31,9 @@ function flatten_layers(layers::Vector{Dict{Int, Int}})
     shifts = Vector{Int}(undef, length(layers))
     proof_size = 0
 
-    for layer in layers
+    for i in 1:length(layers)
         shifts[i] = proof_size
-        proof_size += length(layer)
+        proof_size += length(layers[i])
     end
 
     return (shifts, proof_size)
@@ -101,3 +100,5 @@ function verify_batched_proof(depth::Int, root::String, leaves::Vector{String}, 
 
     return true
 end
+
+export get_path, batch_paths, flatten_layers, batch_proofs, verify_merkle_proof, index_batched_proof, verify_batched_proof
