@@ -31,9 +31,8 @@ end
 
 Random.rand(rng::Random.AbstractRNG, ::Random.SamplerType{T}) where {T<:BinaryPoly} = T(rand(rng, primitive_type(T)))
 
-# Base.convert(::Type{T}, v::U) where {T<:BinaryPoly,U<:BinaryPoly} = T(binary_val(v))
 
-
+# Binary field operations
 +(a::T, b::T) where {T<:BinaryPoly} = T(binary_val(a) ⊻ binary_val(b))
 
 @generated function *(a::BinaryPoly64, b::BinaryPoly64)
@@ -49,8 +48,11 @@ Random.rand(rng::Random.AbstractRNG, ::Random.SamplerType{T}) where {T<:BinaryPo
             return BinaryPoly128(reinterpret(UInt128, pmull_res))
         end
     elseif Sys.ARCH == :x86_64
-        # XXX: Might need some optimizations, not sure these are the best types right now!
-        # XXX: Also, should rewrite * depending on arch?
+        # XXX: Might need some optimizations, not sure these are the best types
+        # right now!
+        # XXX: Also, should rewrite * depending on arch? Note that we can
+        # multiply any parts of the register using the last argument to
+        # pclmulqdq, which should reduce data movement.
         quote
             pmull_res = Vec(ccall("llvm.x86.pclmulqdq",
                 llvmcall,
