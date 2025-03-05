@@ -31,7 +31,8 @@ end
 
 Random.rand(rng::Random.AbstractRNG, ::Random.SamplerType{T}) where {T<:BinaryPoly} = T(rand(rng, primitive_type(T)))
 
-Base.convert(::Type{T}, v::U) where {T<:BinaryPoly,U<:BinaryPoly} = T(binary_val(v))
+# Base.convert(::Type{T}, v::U) where {T<:BinaryPoly,U<:BinaryPoly} = T(binary_val(v))
+
 
 +(a::T, b::T) where {T<:BinaryPoly} = T(binary_val(a) ⊻ binary_val(b))
 

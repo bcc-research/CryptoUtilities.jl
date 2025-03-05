@@ -12,6 +12,8 @@ Base.adjoint(x::T) where T <: BinaryFieldElem = x
 
 export GF2_128Elem
 
+Base.convert(::Type{T}, v::T) where {T<:BinaryFieldElem} = v
+
 # Define a GF2^128 element of a binary field
 struct GF2_128Elem <: BinaryFieldElem
     value::UInt128
@@ -67,11 +69,14 @@ function reduce_poly(a::NTuple{2, UInt128}, poly)
     return a_lo
 end
 
-function *(a::T, b::GF2_128Elem) where T <: BinaryFieldElem
-    a_upconv = convert(GF2_128Elem, a)
-    c_mul = carryless_mul(binary_val(a_upconv), binary_val(b))
-    return GF2_128Elem(reduce_poly(c_mul, irreducible_poly(b)))
+function *(a::GF2_128Elem, b::GF2_128Elem)
+    (hi, lo) = carryless_mul(binary_val(a), binary_val(b))
+
+    tmp = hi ⊻ (hi >> 127) ⊻ (hi >> 126) ⊻ (hi >> 121)
+    res = lo ⊻ tmp ⊻ (tmp << 1) ⊻ (tmp << 2) ⊻ (tmp << 7)
+    return GF2_128Elem(res)
 end
+
 
 function +(a::GF2_128Elem, b::GF2_128Elem)
     GF2_128Elem(a.value ⊻ b.value)
@@ -167,17 +172,17 @@ export GF2_8Elem
 @define_GF2_Elem 64
 
 # XXX: Make this fast via repeated squaring
-function Base.convert(::Type{GF2_128Elem}, v::T) where T <: BinaryFieldElem
-    a = v.value
-    # Should be constant, check decompilation
-    bit_size = 8*sizeof(v)
-    skip_size = div(128, bit_size)
+# function Base.convert(::Type{GF2_128Elem}, v::T) where T <: BinaryFieldElem
+#     a = v.value
+#     # Should be constant, check decompilation
+#     @show bit_size = 8*sizeof(v)
+#     skip_size = div(128, bit_size)
 
-    output = UInt128(0)
-    for i in 1:bit_size
-        curr_idx = (a >> (i-1)) & 1
-        output |= UInt128(curr_idx) << UInt128(skip_size*(i-1))
-    end
+#     output = UInt128(0)
+#     for i in 1:bit_size
+#         curr_idx = (a >> (i-1)) & 1
+#         output |= UInt128(curr_idx) << UInt128(skip_size*(i-1))
+#     end
 
-    GF2_128Elem(output)
-end
+#     GF2_128Elem(output)
+# end
