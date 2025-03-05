@@ -42,17 +42,21 @@ Base.convert(::Type{T}, v::U) where {T<:BinaryPoly,U<:BinaryPoly} = T(binary_val
                 llvmcall,
                 NTuple{16,VecElement{UInt8}},
                 (UInt64, UInt64),
-                binary_val(a), binary_val(b)))
+                binary_val(a), binary_val(b)
+            ))
 
             return BinaryPoly128(reinterpret(UInt128, pmull_res))
         end
     elseif Sys.ARCH == :x86_64
+        # XXX: Might need some optimizations, not sure these are the best types right now!
+        # XXX: Also, should rewrite * depending on arch?
         quote
             pmull_res = Vec(ccall("llvm.x86.pclmulqdq",
                 llvmcall,
                 NTuple{2,VecElement{UInt64}},
-                (UInt64, UInt64),
-                binary_val(a), binary_val(b)))
+                (NTuple{2,VecElement{UInt64}}, NTuple{2,VecElement{UInt64}}, UInt8),
+                VecElement{UInt64}.((binary_val(a), 0)), VecElement{UInt64}.((binary_val(b), 0)), 0x00
+            ))
 
             return BinaryPoly128(reinterpret(UInt128, pmull_res))
         end
