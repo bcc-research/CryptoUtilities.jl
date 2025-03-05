@@ -35,14 +35,30 @@ Base.convert(::Type{T}, v::U) where {T<:BinaryPoly,U<:BinaryPoly} = T(binary_val
 
 +(a::T, b::T) where {T<:BinaryPoly} = T(binary_val(a) ⊻ binary_val(b))
 
-function *(a::BinaryPoly64, b::BinaryPoly64)
-    pmull_res = Vec(ccall("llvm.aarch64.neon.pmull64",
-        llvmcall,
-        NTuple{16,VecElement{UInt8}},
-        (UInt64, UInt64),
-        binary_val(a), binary_val(b)))
+@generated function *(a::BinaryPoly64, b::BinaryPoly64)
+    if Sys.ARCH == :aarch64
+        quote
+            pmull_res = Vec(ccall("llvm.aarch64.neon.pmull64",
+                llvmcall,
+                NTuple{16,VecElement{UInt8}},
+                (UInt64, UInt64),
+                binary_val(a), binary_val(b)))
 
-    return BinaryPoly128(reinterpret(UInt128, pmull_res))
+            return BinaryPoly128(reinterpret(UInt128, pmull_res))
+        end
+    elseif Sys.ARCH == :x86_64
+        quote
+            pmull_res = Vec(ccall("llvm.x86.pclmulqdq",
+                llvmcall,
+                NTuple{2,VecElement{UInt64}},
+                (UInt64, UInt64),
+                binary_val(a), binary_val(b)))
+
+            return BinaryPoly128(reinterpret(UInt128, pmull_res))
+        end
+    else
+        error("Unsupported architecture for binary polynomial 64-bit multiplication")
+    end
 end
 
 split(a::BinaryPoly128) = BinaryPoly64.(unwrap_value.(reinterpret(NTuple{2,VecElement{UInt64}}, binary_val(a))))
