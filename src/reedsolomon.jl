@@ -1,68 +1,94 @@
 mutable struct ReedSolomonEncoding{T <: BinaryFieldElem}
-    deg::UInt
+    log_message_length::UInt
     log_block_length::UInt
-    parity_elem_size::UInt
-    log_parity_elem_size::UInt
-    twiddles_chunks::Matrix{T}
-    set_twiddles::Bool
+    twiddles::Union{Nothing, Vector{T}}
 
-    function ReedSolomonEncoding{T}(deg, log_block_length) where T <: BinaryFieldElem
-        parity_elem_size = 2^log_block_length - deg
-        @assert is_pow_2(parity_elem_size)
-        log_parity_elem_size = round(UInt, log2(parity_elem_size))
-
+    function ReedSolomonEncoding{T}(log_message_length, log_block_length) where T <: BinaryFieldElem
         return new{T}(
-            deg,
+            log_message_length,
             log_block_length,
-            parity_elem_size,
-            log_parity_elem_size,
-            zeros(T, log_chunk_size, div(2^log_block_length, parity_elem_size)+1)
+            nothing
         )
     end
 end
 
-chunk_size(rs::ReedSolomonEncoding) = rs.chunk_size
-log_chunk_size(rs::ReedSolomonEncoding) = rs.log_chunk_size
-degree(rs::ReedSolomonEncoding) = rs.deg
+log_message_length(rs::ReedSolomonEncoding) = rs.log_message_length
+message_length(rs::ReedSolomonEncoding) = 2^log_message_length(rs)
 
-function compute_twiddles!(rs::ReedSolomonEncoding{T}) where T
-    for (i, twiddles_i) in enumerate(eachcol(rs.twiddles_chunks))
-        beta = T((i-1)*chunk_size)
-        compute_twiddles!(twiddles_i, beta, rs.log_chunk_size)
+log_block_length(rs::ReedSolomonEncoding) = rs.log_block_length
+block_length(rs::ReedSolomonEncoding) = 2^log_block_length(rs)
+
+# --- Twiddles stuff ---
+function compute_twiddles!(twiddles, beta, k)
+    layer = Vector{GF2_128Elem}(undef, 2^(k - 1))
+    write_at = 2^(k - 1)
+    s_prev_at_root = layer_0!(layer, beta, k)
+    @views twiddles[write_at:end] .= layer 
+
+
+    for _ in 1:(k - 1) 
+		write_at >>= 1
+		# notice that layer_len = write_at 
+		layer_len = write_at
+		s_prev_at_root = layer_i!(layer, layer_len, s_prev_at_root)
+
+		s_inv = inv(s_prev_at_root)
+		@views @. twiddles[write_at:write_at+layer_len-1] = s_inv * layer[1:layer_len]
     end
-
-    rs.set_twiddles = true
 end
 
-split_vector(rs::ReedSolomonEncoding{T}, v) where T <: BinaryFieldElem = Iterators.partition(v, rs.parity_elem_size)
+function compute_twiddles!(rs::ReedSolomonEncoding{T}; beta=T(0)) where T
+    twiddles = Vector{GF2_128Elem}(undef, block_length(rs) - 1)
+
+    compute_twiddles!(twiddles, beta, log_block_length(rs))
+    
+    rs.twiddles = twiddles
+end
+
+
+# Converts twiddles from long vector to twiddles from shorter one
+function short_from_long_tw(l_tw, n, k)
+	s_tw = Vector{GF2_128Elem}(undef, 2^k - 1)
+	jump = 2^(n - k)
+	s_tw[1] = l_tw[jump]
+
+	idx = 2
+	for i in 1:k-1
+		jump *= 2
+		take = 2^i
+
+		@views @. s_tw[idx:idx + take - 1] = l_tw[jump:jump + take - 1]
+		idx += take
+	end
+
+	return s_tw
+end
 
 function encode(rs::ReedSolomonEncoding{T}, message::Vector{T}) where T
-    @assert length(message) == rs.deg
-    @assert rs.set_twiddles
-    message_copy = deepcopy(message)
-    msg_chunks = split_vector(rs, message_copy)
-    
-    v_parity = zeros(T, rs.parity_elem_size)
+    @assert length(message) == message_length(rs)
+    @assert !isnothing(rs.twiddles)
 
-    # Drops the first chunk, used later
-    for (msg_chunk, twiddle_chunk) in Iterators.drop(zip(msg_chunks, eachcol(rs.twiddles_chunks)), 1)
-        ifft_twiddles!(msg_chunk; twiddles=twiddle_chunk)
-        v_parity .+= msg_chunk
-    end
+    message_coeffs = zeros(T, block_length(rs))
+    message_coeffs_view = @view message_coeffs[1:message_length(rs)]
+    message_coeffs_view .= message
 
-    fft!(v_parity, twiddles=rs.twiddles_chunks[1]);
+    s_tw = short_from_long_tw(rs.twiddles, log_block_length(rs), log_message_length(rs))
 
-    return [v_parity; message]
+    ifft!(message_coeffs_view; twiddles=s_tw)
+    fft!(message_coeffs, twiddles=rs.twiddles);
+
+    return message_coeffs
 end
 
-function encode!(vector::Vector{T}; inv_rate=2, twiddles=nothing) where T <: BinaryFieldElem
-    @assert is_pow_2(length(vector))
+function reed_solomon(message_length, block_length)
+    @assert is_pow_2(block_length) && is_pow_2(message_length)
+    @assert message_length < block_length
 
-    message_length = div(length(vector), inv_rate)
-    if isnothing(twiddles)
-        twiddles = compute_twiddles(zero(GF2_128Elem), round(UInt, log2(length(vector))))
-    end
-    ifft!((@view vector[1:message_length]); twiddles=(@view twiddles[1:message_length]))
-    vector[message_length+1:end] .= zero(T)
-    fft!(vector; twiddles)
+    log_message_length = round(Int, log2(message_length))
+    log_block_length = round(Int, log2(block_length))
+
+    rs = ReedSolomonEncoding{GF2_128Elem}(log_message_length, log_block_length)
+    compute_twiddles!(rs)
+
+    return rs
 end

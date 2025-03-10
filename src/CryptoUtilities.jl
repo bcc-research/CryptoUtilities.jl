@@ -13,6 +13,8 @@ include("./binaryfield.jl")
 
 # Binary FFT stuff
 include("./binaryfft.jl")
+
+export reed_solomon
 include("./reedsolomon.jl")
 
 include("./experiment.jl")

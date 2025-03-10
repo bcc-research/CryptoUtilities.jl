@@ -24,13 +24,7 @@ irreducible_poly(::GF2_128Elem) = UInt128(0b10000111) # x^128 + x^7 + x^2 + x + 
 
 # Only works for ARM chips with crypto NEON extensions
 function carryless_mul(a::UInt64, b::UInt64)
-    pmull_res = Vec(ccall("llvm.aarch64.neon.pmull64",
-                          llvmcall,
-                          NTuple{16, VecElement{UInt8}},
-                          (UInt64,UInt64),
-                          a, b))
-
-    return reinterpret(UInt128, pmull_res)
+    return binary_val(BinaryPoly64(a)*BinaryPoly64(b))
 end
 
 function split_long(a::UInt128)

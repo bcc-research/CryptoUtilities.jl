@@ -31,7 +31,6 @@ end
 
 Random.rand(rng::Random.AbstractRNG, ::Random.SamplerType{T}) where {T<:BinaryPoly} = T(rand(rng, primitive_type(T)))
 
-
 # Binary field operations
 +(a::T, b::T) where {T<:BinaryPoly} = T(binary_val(a) ⊻ binary_val(b))
 
