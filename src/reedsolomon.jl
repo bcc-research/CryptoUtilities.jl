@@ -1,9 +1,9 @@
-mutable struct ReedSolomonEncoding{T <: BinaryFieldElem}
+mutable struct ReedSolomonEncoding{T <: BinaryElem}
     log_message_length::UInt
     log_block_length::UInt
     twiddles::Union{Nothing, Vector{T}}
 
-    function ReedSolomonEncoding{T}(log_message_length, log_block_length) where T <: BinaryFieldElem
+    function ReedSolomonEncoding{T}(log_message_length, log_block_length) where T <: BinaryElem
         return new{T}(
             log_message_length,
             log_block_length,
@@ -20,7 +20,7 @@ block_length(rs::ReedSolomonEncoding) = 2^log_block_length(rs)
 
 # --- Twiddles stuff ---
 function compute_twiddles!(twiddles, beta, k)
-    layer = Vector{GF2_128Elem}(undef, 2^(k - 1))
+    layer = Vector{typeof(beta)}(undef, 2^(k - 1))
     write_at = 2^(k - 1)
     s_prev_at_root = layer_0!(layer, beta, k)
     @views twiddles[write_at:end] .= layer 
@@ -38,17 +38,16 @@ function compute_twiddles!(twiddles, beta, k)
 end
 
 function compute_twiddles!(rs::ReedSolomonEncoding{T}; beta=T(0)) where T
-    twiddles = Vector{GF2_128Elem}(undef, block_length(rs) - 1)
+    twiddles = Vector{T}(undef, block_length(rs) - 1)
 
     compute_twiddles!(twiddles, beta, log_block_length(rs))
     
     rs.twiddles = twiddles
 end
 
-
 # Converts twiddles from long vector to twiddles from shorter one
 function short_from_long_tw(l_tw, n, k)
-	s_tw = Vector{GF2_128Elem}(undef, 2^k - 1)
+	s_tw = Vector{eltype(l_tw)}(undef, 2^k - 1)
 	jump = 2^(n - k)
 	s_tw[1] = l_tw[jump]
 
@@ -80,14 +79,14 @@ function encode(rs::ReedSolomonEncoding{T}, message::Vector{T}) where T
     return message_coeffs
 end
 
-function reed_solomon(message_length, block_length)
+function reed_solomon(::Type{T}, message_length, block_length) where T
     @assert is_pow_2(block_length) && is_pow_2(message_length)
     @assert message_length < block_length
 
     log_message_length = round(Int, log2(message_length))
     log_block_length = round(Int, log2(block_length))
 
-    rs = ReedSolomonEncoding{GF2_128Elem}(log_message_length, log_block_length)
+    rs = ReedSolomonEncoding{T}(log_message_length, log_block_length)
     compute_twiddles!(rs)
 
     return rs

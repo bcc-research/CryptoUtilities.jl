@@ -1,4 +1,3 @@
-export BinaryPoly8, BinaryPoly16, BinaryPoly32, BinaryPoly64, BinaryPoly128
 
 abstract type BinaryPoly end
 
@@ -31,8 +30,12 @@ end
 
 Random.rand(rng::Random.AbstractRNG, ::Random.SamplerType{T}) where {T<:BinaryPoly} = T(rand(rng, primitive_type(T)))
 
+Base.convert(::Type{T}, v::U) where {T<:BinaryPoly,U<:BinaryPoly} = T(binary_val(v))
+
 # Binary field operations
 +(a::T, b::T) where {T<:BinaryPoly} = T(binary_val(a) ⊻ binary_val(b))
+<<(a::T, n::Int) where {T<:BinaryPoly} = T(binary_val(a) << n)
+>>(a::T, n::Int) where {T<:BinaryPoly} = T(binary_val(a) >> n)
 
 @generated function *(a::BinaryPoly64, b::BinaryPoly64)
     if Sys.ARCH == :aarch64
@@ -102,6 +105,7 @@ function reduce_poly(a::NTuple{2,BinaryPoly128}, poly)
     _, a_lo = reduce_step(a, poly)
     return a_lo
 end
+
 
 # # XXX: Maybe should be a different type, but good enough for now.  Computes the
 # # divisor and remainder of a / b, interpreting the bits as coefficients of a

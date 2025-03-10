@@ -2,14 +2,10 @@ module CryptoUtilities
 
 include("./utilities.jl")
 
-import Base: *, +, inv
-import Random
-using SIMD
 using LinearAlgebra
 
-# Finite field stuff
-include("./binarypoly.jl")
-include("./binaryfield.jl")
+# Internal packages
+using BinaryFields
 
 # Binary FFT stuff
 include("./binaryfft.jl")

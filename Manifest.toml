@@ -2,7 +2,7 @@
 
 julia_version = "1.11.2"
 manifest_format = "2.0"
-project_hash = "c99f8951b0d21d44ea5bf61718e2e86e274112a6"
+project_hash = "4f8d63a55b5ff5a024223cd43a243a2557cc3477"
 
 [[deps.Artifacts]]
 uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
@@ -11,6 +11,12 @@ version = "1.11.0"
 [[deps.Base64]]
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 version = "1.11.0"
+
+[[deps.BinaryFields]]
+deps = ["Random", "SIMD"]
+path = "BinaryFields"
+uuid = "0fee9d7f-8397-4f0d-9ec6-117db1666467"
+version = "0.1.0"
 
 [[deps.CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]

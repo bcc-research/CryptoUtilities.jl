@@ -1,0 +1,1 @@
+unwrap_value(a::VecElement{T}) where T = a.value

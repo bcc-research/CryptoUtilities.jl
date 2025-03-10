@@ -2,79 +2,37 @@
 # in this particular case likely due to (in this case unnecessary) type safety
 # checks
 
-abstract type BinaryFieldElem <: Number end
+abstract type BinaryElem <: Number end
 
-binary_val(x::T) where T <: BinaryFieldElem = x.value
-Base.zero(::T) where T <: BinaryFieldElem = T(0)
-Base.zero(::Type{T}) where T <: BinaryFieldElem = T(0)
-Base.transpose(x::T) where T <: BinaryFieldElem = x
-Base.adjoint(x::T) where T <: BinaryFieldElem = x
+poly(x::T) where T <: BinaryElem = x.poly
+binary_val(x::T) where T <: BinaryElem = binary_val(poly(x))
+Base.zero(::T) where T <: BinaryElem = T(0)
+Base.zero(::Type{T}) where T <: BinaryElem = T(0)
+Base.transpose(x::T) where T <: BinaryElem = x
+Base.adjoint(x::T) where T <: BinaryElem = x
 
-export GF2_128Elem
-
-Base.convert(::Type{T}, v::T) where {T<:BinaryFieldElem} = v
+Base.convert(::Type{T}, v::T) where {T<:BinaryElem} = v
 
 # Define a GF2^128 element of a binary field
-struct GF2_128Elem <: BinaryFieldElem
-    value::UInt128
+struct BinaryElem128 <: BinaryElem
+    poly::BinaryPoly128
 end
-Random.rand(rng::Random.AbstractRNG, ::Random.SamplerType{GF2_128Elem}) = GF2_128Elem(rand(rng, UInt128))
+Random.rand(rng::Random.AbstractRNG, ::Random.SamplerType{BinaryElem128}) = BinaryElem128(rand(rng, BinaryPoly128))
 
-irreducible_poly(::GF2_128Elem) = UInt128(0b10000111) # x^128 + x^7 + x^2 + x + 1, standard
+irreducible_poly(::BinaryElem128) = UInt128(0b10000111) # x^128 + x^7 + x^2 + x + 1, standard
 
-# Only works for ARM chips with crypto NEON extensions
-function carryless_mul(a::UInt64, b::UInt64)
-    return binary_val(BinaryPoly64(a)*BinaryPoly64(b))
-end
+# Make these macro-generated
+function mod_irreducible(a::NTuple{2, BinaryPoly128})
+    (hi, lo) = a
 
-function split_long(a::UInt128)
-    UInt64(a >> 64), UInt64(a & typemax(UInt64))
-end
+    tmp = hi + (hi >> 127) + (hi >> 126) + (hi >> 121)
+    res = lo + tmp + (tmp << 1) + (tmp << 2) + (tmp << 7)
 
-function carryless_mul(a::UInt128, b::UInt128)
-    a_hi, a_lo = split_long(a)
-    b_hi, b_lo = split_long(b)
-
-    z0 = carryless_mul(a_lo, b_lo)
-    z1 = carryless_mul(a_lo ⊻ a_hi, b_lo ⊻ b_hi)
-    z2 = carryless_mul(a_hi, b_hi)
-
-    result_lo = z0
-    result_hi = z2
-    result_mid = z0 ⊻ z1 ⊻ z2
-
-    lo_bits = (result_mid << 64) ⊻ result_lo
-    hi_bits = result_hi ⊻ (result_mid >> 64)
-    
-    return (hi_bits, lo_bits)
+    return res
 end
 
-# Can make generic, fine for now
-function reduce_once(a::NTuple{2, UInt128}, poly)
-    a_hi, a_lo = a
-    res_hi, res_lo = carryless_mul(a_hi, poly)
-
-    return (res_hi, a_lo ⊻ res_lo)
-end
-
-function reduce_poly(a::NTuple{2, UInt128}, poly)
-    a = reduce_once(a, poly)
-    _, a_lo = reduce_once(a, poly)
-    return a_lo
-end
-
-function *(a::GF2_128Elem, b::GF2_128Elem)
-    (hi, lo) = carryless_mul(binary_val(a), binary_val(b))
-
-    tmp = hi ⊻ (hi >> 127) ⊻ (hi >> 126) ⊻ (hi >> 121)
-    res = lo ⊻ tmp ⊻ (tmp << 1) ⊻ (tmp << 2) ⊻ (tmp << 7)
-    return GF2_128Elem(res)
-end
-
-
-function +(a::GF2_128Elem, b::GF2_128Elem)
-    GF2_128Elem(a.value ⊻ b.value)
-end
+*(a::BinaryElem128, b::BinaryElem128) = mod_irreducible(poly(a)*poly(b))
++(a::T, b::T) where T <: BinaryElem = BinaryElem128(poly(a)+poly(b))
 
 # XXX: Maybe should be a different type, but good enough for now.  Computes the
 # divisor and remainder of a / b, interpreting the bits as coefficients of a
@@ -137,33 +95,32 @@ function egcd(r_1::UInt128, r_2::UInt128)
 end
 
 # XXX: We should make these generic
-function inv(a::GF2_128Elem)
+function inv(a::BinaryElem128)
     q, r = div_irreducible(binary_val(a), irreducible_poly(a)) # p / a :: p = q*a + r 
     _, t, s = egcd(binary_val(a), r)
     # t*a + s*r = 1 = t*a + s*(p-q*a)
     # => (t-s*q)*a + s*p = 1
     # => ^^^^^^^ is inv of a
-    return GF2_128Elem(t) + GF2_128Elem(s)*GF2_128Elem(q)
+    return BinaryElem128(t) + BinaryElem128(s)*BinaryElem128(q)
 end
 
 # --- Other elements of other sizes ---
-macro define_GF2_Elem(uint_size)
-    gf2_elem_type = Symbol("GF2_$(uint_size)Elem")
+macro define_binary_elem(uint_size)
+    gf2_elem_type = Symbol("BinaryElem$(uint_size)")
     uint_type = Symbol("UInt$(uint_size)")
 
     return quote
-        struct $(gf2_elem_type) <: BinaryFieldElem
+        struct $(gf2_elem_type) <: BinaryElem
             value::$(uint_type)
         end
     end
 end
 
-export GF2_8Elem
-# Right now, just handle these by upconverting to GF2_128Elem
-@define_GF2_Elem 8
-@define_GF2_Elem 16
-@define_GF2_Elem 32
-@define_GF2_Elem 64
+# Right now, just handle these by upconverting to BinaryElem128
+@define_binary_elem 8
+@define_binary_elem 16
+@define_binary_elem 32
+@define_binary_elem 64
 
 # XXX: Make this fast via repeated squaring
 # function Base.convert(::Type{GF2_128Elem}, v::T) where T <: BinaryFieldElem

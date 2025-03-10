@@ -151,14 +151,15 @@ next_s(s_prev, s_prev_at_root) = s_prev*s_prev + s_prev_at_root*s_prev
 compute_s_at_root(prev_layer, s_prev_at_root) = next_s(prev_layer[2] + prev_layer[1], s_prev_at_root)
 
 function layer_0!(layer, beta, k)
+    T = eltype(layer)
     for i in 1:2^(k-1)
       l0i = beta
-      l0i += GF2_128Elem((i-1) << 1)
+      l0i += T((i-1) << 1)
       layer[i] = l0i
     end
 
     # s0(v0)
-    return GF2_128Elem(1)
+    return T(1)
 end
 
 function layer_i!(layer, layer_len, s_prev_at_root)
