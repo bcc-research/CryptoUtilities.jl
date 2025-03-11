@@ -17,7 +17,7 @@ include("./experiment.jl")
 
 # Other crypto stuff
 # Commenting out for now to be able to run tests
-# include("./merkletree.jl")
+include("./merkletree.jl")
 # include("./merkle_proofs.jl")
 
 

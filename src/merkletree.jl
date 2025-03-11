@@ -1,31 +1,50 @@
 using SHA
-function hash_pair(left::String, right::String)
-    return bytes2hex(sha256(left * right))
+
+# for now simply assume that isbitstype(T) = true
+hash_leaf(leaf::Vector{T}) where T = sha256(reinterpret(UInt8, leaf))
+hash_siblings(left_hash::Vector{UInt8}, right_hash::Vector{UInt8}) = sha256(vcat(left_hash, right_hash))
+
+function hash_siblings_hex(left_hash::String, right_hash::String)
+    left_bytes = hex2bytes(left_hash)
+    right_bytes = hex2bytes(right_hash)
+    
+    hash_bytes = sha256(vcat(left_bytes, right_bytes))
+    return bytes2hex(hash_bytes)
 end
 
-function build_merkle_tree(data::Vector{String})
-    if isempty(data)
+function is_power_of_two(n::Int)
+    return n > 0 && (n & (n - 1)) == 0
+end
+
+function build_merkle_tree(leaves::Vector{Vector{T}}) where T
+    @assert is_power_of_two(length(leaves))
+    if isempty(leaves)
         return []
     end
 
-    current_layer = [bytes2hex(sha256(d)) for d in data]
-    tree = [current_layer]
+    current_layer = [hash_leaf(leaf) for leaf in leaves]
+    tree = [[bytes2hex(leaf) for leaf in current_layer]]
 
     while length(current_layer) > 1
-        next_layer = []
+        next_layer_size = length(current_layer) ÷ 2
+        next_layer = [Vector{UInt8}(undef, 32) for _ in 1:next_layer_size]
+
+        cnt = 1
         for i in 1:2:length(current_layer)
             left = current_layer[i]
             right = current_layer[i + 1]
-            push!(next_layer, hash_pair(left, right))
+            next_layer[cnt] = hash_siblings(left, right)
+            cnt += 1
         end
-        push!(tree, next_layer)
+
+        push!(tree, [bytes2hex(node) for node in next_layer])
         current_layer = next_layer
     end
 
     return tree
 end
 
-function get_root(tree::Vector{Vector{String}})
+function get_root(tree)
     return isempty(tree) ? "" : tree[end][1]
 end
 
@@ -93,9 +112,9 @@ function verify_ith_layer!(layer, queries, curr_cnt, proof, proof_cnt)
             proof_cnt += 1
             pp = proof[proof_cnt]
             if query % 2 != 0
-                layer[next_cnt] = hash_pair(pp, layer[i])
+                layer[next_cnt] = hash_siblings_hex(pp, layer[i])
             else
-                layer[next_cnt] = hash_pair(layer[i], pp)
+                layer[next_cnt] = hash_siblings_hex(layer[i], pp)
             end
             break
         end
@@ -103,16 +122,16 @@ function verify_ith_layer!(layer, queries, curr_cnt, proof, proof_cnt)
         if query % 2 != 0
             proof_cnt += 1
             pp = proof[proof_cnt]
-            layer[next_cnt] = hash_pair(pp, layer[i])
+            layer[next_cnt] = hash_siblings_hex(pp, layer[i])
             i += 1
         else
             if queries[i + 1] != sibling
                 proof_cnt += 1
                 pp = proof[proof_cnt]
-                layer[next_cnt] = hash_pair(layer[i], pp)
+                layer[next_cnt] = hash_siblings_hex(layer[i], pp)
                 i += 1
             else
-                layer[next_cnt] = hash_pair(layer[i], layer[i + 1])
+                layer[next_cnt] = hash_siblings_hex(layer[i], layer[i + 1])
                 i += 2
             end
         end
@@ -123,7 +142,7 @@ end
 
 function verify_proof(root, depth, leaves, leaf_queries, batched_proof)
     proof = copy(batched_proof)
-    layer = [bytes2hex(sha256(l)) for l in leaves]
+    layer = [bytes2hex(hash_leaf(leaf)) for leaf in leaves]
     queries = copy(leaf_queries)
 
     curr_cnt = length(queries)
