@@ -4,7 +4,7 @@ struct BinaryElem128 <: BinaryElem
 end
 Random.rand(rng::Random.AbstractRNG, ::Random.SamplerType{BinaryElem128}) = BinaryElem128(rand(rng, BinaryPoly128))
 Base.convert(::Type{BinaryElem128}, v::BinaryPoly128) = BinaryElem128(v)
-Base.convert(::Type{BinaryElem16}, v::UInt128) = BinaryElem128(BinaryPoly128(v))
+Base.convert(::Type{BinaryElem128}, v::UInt128) = BinaryElem128(BinaryPoly128(v))
 
 # tmp hack 
 Base.one(::Type{BinaryElem128}) = BinaryPoly128(UInt128(1))
