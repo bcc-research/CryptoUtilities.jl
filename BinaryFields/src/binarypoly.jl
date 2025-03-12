@@ -31,11 +31,22 @@ end
 Random.rand(rng::Random.AbstractRNG, ::Random.SamplerType{T}) where {T<:BinaryPoly} = T(rand(rng, primitive_type(T)))
 Base.convert(::Type{T}, v::U) where {T<:BinaryPoly,U<:BinaryPoly} = T(binary_val(v))
 
-# Binary field operations
 +(a::T, b::T) where {T<:BinaryPoly} = T(binary_val(a) ⊻ binary_val(b))
 <<(a::T, n::Int) where {T<:BinaryPoly} = T(binary_val(a) << n)
 >>(a::T, n::Int) where {T<:BinaryPoly} = T(binary_val(a) >> n)
 
+# I think it's cleaner to handle if we define simply on UInt64 than on poly
+function mul(a::UInt64, b::UInt64)
+    pmull_res = Vec(ccall("llvm.aarch64.neon.pmull64",
+                          llvmcall,
+                          NTuple{16, VecElement{UInt8}},
+                          (UInt64,UInt64),
+                          a, b))
+
+    return reinterpret(UInt128, pmull_res)
+end
+
+shift_upper_bits(a::BinaryPoly64) = BinaryPoly128(UInt128(binary_val(a)) << 64)
 @generated function *(a::BinaryPoly64, b::BinaryPoly64)
     if Sys.ARCH == :aarch64
         quote
@@ -70,8 +81,6 @@ Base.convert(::Type{T}, v::U) where {T<:BinaryPoly,U<:BinaryPoly} = T(binary_val
 end
 
 split(a::BinaryPoly128) = BinaryPoly64.(unwrap_value.(reinterpret(NTuple{2,VecElement{UInt64}}, binary_val(a))))
-shift_upper_bits(a::BinaryPoly64) = BinaryPoly128(UInt128(binary_val(a)) << 64)
-
 function *(a::BinaryPoly128, b::BinaryPoly128)
     a_lo, a_hi = split(a)
     b_lo, b_hi = split(b)
@@ -91,77 +100,52 @@ function *(a::BinaryPoly128, b::BinaryPoly128)
     return (hi_bits, lo_bits)
 end
 
-# Can make generic, fine for now. See docs for why this works
-function reduce_step(a::NTuple{2,BinaryPoly128}, poly)
-    a_hi, a_lo = a
-    res_hi, res_lo = a_hi * poly
+function *(a::BinaryPoly16, b::BinaryPoly16)
+    res = mul(UInt64(binary_val(a)), UInt64(binary_val(b)))
 
-    return (res_hi, a_lo + res_lo)
+    lo = convert(UInt16, res & typemax(UInt16))
+    hi = UInt16(res >> 16)
+
+    return BinaryPoly16(hi), BinaryPoly16(lo)
 end
 
-function reduce_poly(a::NTuple{2,BinaryPoly128}, poly)
-    a = reduce_step(a, poly)
-    _, a_lo = reduce_step(a, poly)
-    return a_lo
+# Computes the divisor and remainder of a / b
+function divrem(a::T, b::T) where {T<:BinaryPoly}
+    @assert binary_val(b) != 0
+
+    shift = leading_zeros(binary_val(b))
+    q = T(0)
+
+    bit_post = T(1) << (sizeof(T) * 8 - 1)
+    bit_post_div = T(1) << shift
+    b = b << shift
+
+    while shift >= 0
+        if (binary_val(a) & binary_val(bit_post)) != 0
+            q = q + bit_post_div
+            a = a + b
+        end
+        shift -= 1
+        b = b >> 1
+        bit_post = bit_post >> 1
+        bit_post_div = bit_post_div >> 1
+    end
+
+    return q, a
 end
 
-
-# # XXX: Maybe should be a different type, but good enough for now.  Computes the
-# # divisor and remainder of a / b, interpreting the bits as coefficients of a
-# # polyomial over F_2. Used for inversion. Also assumes that (for now) things are
-# # not silly i.e., that `a` isn't mostly zeros. Can be optimized in that case.
-# function divrempoly(a::UInt128, b::UInt128)
-#     @assert b != 0
-
-#     shift = leading_zeros(b)
-#     q = UInt128(0)
-
-#     bit_post = UInt128(1) << UInt128(127)
-#     bit_post_div = UInt128(1) << shift
-#     b <<= shift
-
-#     while shift >= 0
-#         if (a & bit_post) != 0
-#             q |= bit_post_div
-#             a ⊻= b
-#         end
-#         shift -= 1
-#         b >>= 1
-#         bit_post >>= 1
-#         bit_post_div >>= 1
-#     end
-
-#     return q, a
-# end
-
-# # when we compute irreducible / a then we have to be careful since irreducible requires more than 128 bits
-# function div_irreducible(a::UInt128, irr_low)
-#     @assert a != 0
-
-#     shift = leading_zeros(a) + 1
-#     q0 = UInt128(1) << shift
-#     r0 = irr_low ⊻ (a << shift)
-
-#     (q, r) = divrempoly(r0, a)
-
-#     return (q0 ⊻ q, r)
-# end
-
-# # g, t, s = egcd(a, b) => t * a + s * b = g = gcd(a, b)
-# # | via recursion: t' * b + s' * (a % b) = gcd(a, b)
-# # | => t' * b + s' * (a + a/b * b)
-# # | => s' * a + t' + (s' * a/b) * b = gcd(a, b)
-# function egcd(r_1::UInt128, r_2::UInt128)
-#     if r_2 == 0
-#         @assert r_1 != 0
-#         return r_1, UInt128(1), UInt128(0)
-#     else
-#         q, r_3 = divrempoly(r_1, r_2)
-#         g, t, s = egcd(r_2, r_3)
-#         _, qs = carryless_mul(q, s)
-#         return g, s, qs ⊻ t
-#         g, x1, y1 = egcd(r_2, r_3)
-#         _, mul_res = carryless_mul(q, y1)
-#         return g, y1, mul_res ⊻ x1
-#     end
-# end
+# g, t, s = egcd(a, b) => t * a + s * b = g = gcd(a, b)
+# | via recursion: t' * b + s' * (a % b) = gcd(a, b)
+# | => t' * b + s' * (a + a/b * b)
+# | => s' * a + t' + (s' * a/b) * b = gcd(a, b)
+function egcd(r_1::T, r_2::T) where {T<:BinaryPoly}
+    if binary_val(r_2) == 0
+        @assert binary_val(r_1) != 0
+        return r_1, T(1), T(0)
+    else
+        q, r_3 = divrem(r_1, r_2)
+        g, t, s = egcd(r_2, r_3)
+        _, qs = q * s
+        return g, s, qs + t
+    end
+end

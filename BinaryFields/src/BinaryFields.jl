@@ -1,14 +1,18 @@
 module BinaryFields
 
 using SIMD, Random
-import Base: +, *, zero, transpose, adjoint, inv, <<, >>
+import Base: +, *, zero, one, transpose, adjoint, inv, <<, >>
 
-export BinaryPoly8, BinaryPoly16, BinaryPoly32, BinaryPoly64, BinaryPoly128
-export BinaryElem, BinaryElem8, BinaryElem16, BinaryElem32, BinaryElem64, BinaryElem128
+export BinaryPoly16, BinaryPoly64, BinaryPoly128
+export BinaryElem, BinaryElem16, BinaryElem128
 
 include("./utilities.jl")
 
 include("./binarypoly.jl")
 include("./binaryfield.jl")
+
+include("./be128.jl")
+include("./be16.jl")
+
 
 end # module BinaryFields
