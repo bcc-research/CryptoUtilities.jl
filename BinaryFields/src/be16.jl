@@ -7,6 +7,8 @@ Base.convert(::Type{BinaryElem16}, v::BinaryPoly16) = BinaryElem16(v)
 Base.convert(::Type{BinaryElem16}, v::UInt16) = BinaryElem16(BinaryPoly16(v))
 
 # tmp hack 
+Base.convert(::Type{BinaryElem16}, x::Int) = BinaryElem16(BinaryPoly16(UInt16(x)))
+Base.zero(::Type{BinaryElem16}) = BinaryPoly16(UInt16(0))
 Base.one(::Type{BinaryElem16}) = BinaryPoly16(UInt16(1))
 
 

@@ -5,6 +5,7 @@ import Base: +, *, zero, one, transpose, adjoint, inv, <<, >>
 
 export BinaryPoly16, BinaryPoly64, BinaryPoly128
 export BinaryElem, BinaryElem16, BinaryElem128
+export binary_val
 
 include("./utilities.jl")
 

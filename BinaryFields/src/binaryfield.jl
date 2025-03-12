@@ -28,6 +28,9 @@ Base.zero(::Type{T}) where T <: BinaryElem = T(0)
 Base.transpose(x::T) where T <: BinaryElem = x
 Base.adjoint(x::T) where T <: BinaryElem = x
 
+#tmp 
+export binary_val
+
 Base.convert(::Type{T}, v::T) where {T<:BinaryElem} = v
 
 *(a::T, b::T) where T<: BinaryElem = mod_irreducible(poly(a)*poly(b))

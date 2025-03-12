@@ -7,7 +7,9 @@ Base.convert(::Type{BinaryElem128}, v::BinaryPoly128) = BinaryElem128(v)
 Base.convert(::Type{BinaryElem128}, v::UInt128) = BinaryElem128(BinaryPoly128(v))
 
 # tmp hack 
+Base.zero(::Type{BinaryElem128}) = BinaryPoly128(UInt128(0))
 Base.one(::Type{BinaryElem128}) = BinaryPoly128(UInt128(1))
+
 
 irreducible_poly(::Type{BinaryElem128}) = BinaryPoly128(UInt128(0b10000111)) # x^128 + x^7 + x^2 + x + 1, standard
 

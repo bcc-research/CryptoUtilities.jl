@@ -18,5 +18,6 @@ include("./experiment.jl")
 include("./merkletree.jl")
 
 include("./ligero.jl")
+include("./lagrange.jl")
 
-end # module CelestiaProve
+end # module Ligero
