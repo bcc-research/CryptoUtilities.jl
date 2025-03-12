@@ -117,7 +117,7 @@ function divrem(a::T, b::T) where {T<:BinaryPoly}
     shift = leading_zeros(binary_val(b))
     q = T(0)
 
-    bit_post = T(1) << (sizeof(T) * 8 - 1)
+    bit_post = T(1) << (sizeof(primitive_type(T)) * 8 - 1)
     bit_post_div = T(1) << shift
     b = b << shift
 
@@ -127,9 +127,10 @@ function divrem(a::T, b::T) where {T<:BinaryPoly}
             a = a + b
         end
         shift -= 1
-        b = b >> 1
-        bit_post = bit_post >> 1
-        bit_post_div = bit_post_div >> 1
+
+        b >>= 1
+        bit_post >>= 1
+        bit_post_div >>= 1
     end
 
     return q, a
