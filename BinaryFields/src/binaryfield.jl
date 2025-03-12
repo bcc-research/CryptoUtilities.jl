@@ -47,13 +47,11 @@ function div_irreducible(a::T) where {T<:BinaryElem}
     return q0 + q, r
 end
 
-function invert(a::T) where {T<:BinaryElem}
+function inv(a::T) where {T<:BinaryElem}
     q, r = div_irreducible(a) # p / a :: p = q*a + r 
     _, t, s = egcd(poly(a), r)
     # t*a + s*r = 1 = t*a + s*(p-q*a)
     # => (t-s*q)*a + s*p = 1
     # => ^^^^^^^ is inv of a
-    # return T(t) + T(s)*T(q)
-    res = t + poly(mod_irreducible(s * q))
-    return convert(T, res)
+    convert(T, t) + mod_irreducible(s * q)
 end
