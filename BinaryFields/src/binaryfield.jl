@@ -4,47 +4,30 @@
 
 abstract type BinaryElem <: Number end
 
-# --- Other elements of other sizes ---
-# macro define_binary_elem(uint_size)
-#     gf2_elem_type = Symbol("BinaryElem$(uint_size)")
-#     uint_type = Symbol("UInt$(uint_size)")
-
-#     return quote
-#         struct $(gf2_elem_type) <: BinaryElem
-#             value::$(uint_type)
-#         end
-#     end
-# end
-
-# @define_binary_elem 8
-# @define_binary_elem 16
-# @define_binary_elem 32
-# @define_binary_elem 64
-
 poly(x::T) where T <: BinaryElem = x.poly
+poly_type(::Type{T}) where T <: BinaryElem = fieldtypes(T)[1]
 binary_val(x::T) where T <: BinaryElem = binary_val(poly(x))
 Base.zero(::T) where T <: BinaryElem = T(0)
 Base.zero(::Type{T}) where T <: BinaryElem = T(0)
+Base.one(::T) where T <: BinaryElem = T(1)
+Base.one(::Type{T}) where T <: BinaryElem = T(1)
 Base.transpose(x::T) where T <: BinaryElem = x
 Base.adjoint(x::T) where T <: BinaryElem = x
+Random.rand(rng::Random.AbstractRNG, ::Random.SamplerType{T}) where T <: BinaryElem = T(rand(rng, poly_type(T)))
 
 #tmp 
 export binary_val
 
-Base.convert(::Type{T}, v::T) where {T<:BinaryElem} = v
-
 *(a::T, b::T) where T<: BinaryElem = mod_irreducible(poly(a)*poly(b))
 +(a::T, b::T) where T<: BinaryElem = T(poly(a)+poly(b))
-<<(a::T, n::Int) where {T<:BinaryElem} = T(poly(a) << n)
->>(a::T, n::Int) where {T<:BinaryElem} = T(poly(a) >> n)
 
 # when we compute irreducible / a then we have to be careful since irreducible requires 1 more bit than maximal bitsize of our polynomial
 function div_irreducible(a::T) where {T<:BinaryElem}
     @assert binary_val(a) != 0
 
     shift = leading_zeros(binary_val(a)) + 1
-    q0 = one(T) << shift
-    r0 = irreducible_poly(T) + poly((a << shift))
+    q0 = one(poly(a)) << shift
+    r0 = irreducible_poly(T) + (poly(a) << shift)
 
     q, r = divrem(r0, poly(a))
     return q0 + q, r
@@ -56,5 +39,17 @@ function inv(a::T) where {T<:BinaryElem}
     # t*a + s*r = 1 = t*a + s*(p-q*a)
     # => (t-s*q)*a + s*p = 1
     # => ^^^^^^^ is inv of a
-    convert(T, t) + mod_irreducible(s * q)
+    T(t) + mod_irreducible(s * q)
+end
+
+function embed(a::T, ::Type{U}) where {T<:BinaryElem, U<:BinaryElem}
+    @assert sizeof(T) < sizeof(U)
+    k = sizeof(U) ÷ sizeof(T)
+
+    res = poly(a)
+    for _ in 1:k 
+        res *= res
+    end
+
+    U(res)
 end

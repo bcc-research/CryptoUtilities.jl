@@ -5,6 +5,8 @@ abstract type BinaryPoly end
 binary_val(x::T) where {T<:BinaryPoly} = x.value
 Base.zero(::T) where {T<:BinaryPoly} = T(0)
 Base.zero(::Type{T}) where {T<:BinaryPoly} = T(0)
+Base.one(::T) where {T<:BinaryPoly} = T(1)
+Base.one(::Type{T}) where {T<:BinaryPoly} = T(1)
 Base.transpose(x::T) where {T<:BinaryPoly} = x
 Base.adjoint(x::T) where {T<:BinaryPoly} = x
 
@@ -30,24 +32,35 @@ end
 
 Random.rand(rng::Random.AbstractRNG, ::Random.SamplerType{T}) where {T<:BinaryPoly} = T(rand(rng, primitive_type(T)))
 Base.convert(::Type{T}, v::U) where {T<:BinaryPoly,U<:BinaryPoly} = T(binary_val(v))
-Base.convert(::Type{T}, x::Int) where {T<:BinaryPoly} = T(x)
+Base.convert(::Type{T}, x) where {T<:BinaryPoly} = T(x)
 
 +(a::T, b::T) where {T<:BinaryPoly} = T(binary_val(a) ⊻ binary_val(b))
 <<(a::T, n::Int) where {T<:BinaryPoly} = T(binary_val(a) << n)
 >>(a::T, n::Int) where {T<:BinaryPoly} = T(binary_val(a) >> n)
 
-# I think it's cleaner to handle if we define simply on UInt64 than on poly
-function mul(a::UInt64, b::UInt64)
-    pmull_res = Vec(ccall("llvm.aarch64.neon.pmull64",
-                          llvmcall,
-                          NTuple{16, VecElement{UInt8}},
-                          (UInt64,UInt64),
-                          a, b))
+saturate(::Type{T}, a::U) where {T, U <: BinaryPoly} = T(binary_val(a) & typemax(primitive_type(T)))
 
-    return reinterpret(UInt128, pmull_res)
+double_type(::Type{BinaryPoly8}) = BinaryPoly16
+double_type(::Type{BinaryPoly16}) = BinaryPoly32
+double_type(::Type{BinaryPoly32}) = BinaryPoly64
+double_type(::Type{BinaryPoly64}) = BinaryPoly128
+
+half_type(::Type{BinaryPoly16}) = BinaryPoly8
+half_type(::Type{BinaryPoly32}) = BinaryPoly16
+half_type(::Type{BinaryPoly64}) = BinaryPoly32
+half_type(::Type{BinaryPoly128}) = BinaryPoly64
+
+function split(x::T) where {T <: BinaryPoly} 
+    T_half = half_type(T)
+
+    lo = saturate(T_half, x)
+    hi = convert(T_half, x >> (sizeof(T_half) * 8))
+
+    hi, lo
 end
 
 shift_upper_bits(a::BinaryPoly64) = BinaryPoly128(UInt128(binary_val(a)) << 64)
+
 @generated function *(a::BinaryPoly64, b::BinaryPoly64)
     if Sys.ARCH == :aarch64
         quote
@@ -81,7 +94,6 @@ shift_upper_bits(a::BinaryPoly64) = BinaryPoly128(UInt128(binary_val(a)) << 64)
     end
 end
 
-split(a::BinaryPoly128) = BinaryPoly64.(unwrap_value.(reinterpret(NTuple{2,VecElement{UInt64}}, binary_val(a))))
 function *(a::BinaryPoly128, b::BinaryPoly128)
     a_lo, a_hi = split(a)
     b_lo, b_hi = split(b)
@@ -101,17 +113,14 @@ function *(a::BinaryPoly128, b::BinaryPoly128)
     return (hi_bits, lo_bits)
 end
 
-function *(a::BinaryPoly16, b::BinaryPoly16)
-    res = mul(UInt64(binary_val(a)), UInt64(binary_val(b)))
+function *(a::T, b::T) where {T <: Union{BinaryPoly8, BinaryPoly16, BinaryPoly32}}
+    res = convert(BinaryPoly64, a) * convert(BinaryPoly64, b)
 
-    lo = convert(UInt16, res & typemax(UInt16))
-    hi = UInt16(res >> 16)
-
-    return BinaryPoly16(hi), BinaryPoly16(lo)
+    return convert(double_type(T), res)
 end
 
 # Computes the divisor and remainder of a / b
-function divrem(a::T, b::T) where {T<:BinaryPoly}
+function divrem(a::T, b::T) where {T <: BinaryPoly}
     @assert binary_val(b) != 0
 
     shift = leading_zeros(binary_val(b))
@@ -147,7 +156,7 @@ function egcd(r_1::T, r_2::T) where {T<:BinaryPoly}
     else
         q, r_3 = divrem(r_1, r_2)
         g, t, s = egcd(r_2, r_3)
-        _, qs = q * s
+        _, qs = split(q * s)
         return g, s, qs + t
     end
 end
