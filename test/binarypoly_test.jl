@@ -61,16 +61,12 @@ using Test
     end
 
     @testset "Multiplication BinaryPoly64" begin
-        if Sys.ARCH === :aarch64 # Only test pmull64 on aarch64
-            poly_a = BinaryPoly64(UInt64(0b10110010_01010110_11001111_00010010_10010011_01101010_00001111_11110000))
-            poly_b = BinaryPoly64(UInt64(0b01101001_10100011_00110101_10001100_01011010_00110011_11110000_00001111))
+        poly_a = BinaryPoly64(UInt64(0b10110010_01010110_11001111_00010010_10010011_01101010_00001111_11110000))
+        poly_b = BinaryPoly64(UInt64(0b01101001_10100011_00110101_10001100_01011010_00110011_11110000_00001111))
 
-            prod_poly = poly_a * poly_b
-            @test prod_poly isa BinaryPoly128
-            # Value from sage
-            @test CryptoUtilities.binary_val(prod_poly) === UInt128(0b111111101100010010001010011110101000011010001101101110110100101011010010001011010000101010000101110111010100110101000001010000)
-        else
-            @info "Skipping BinaryPoly64 multiplication test (pmull64) as not on aarch64 architecture."
-        end
+        prod_poly = poly_a * poly_b
+        @test prod_poly isa BinaryPoly128
+        # Value from sage
+        @test CryptoUtilities.binary_val(prod_poly) === UInt128(0b111111101100010010001010011110101000011010001101101110110100101011010010001011010000101010000101110111010100110101000001010000)
     end
 end
