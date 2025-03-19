@@ -2,7 +2,6 @@
 abstract type BinaryPoly end
 
 # Generic stuff
-binary_val(x::T) where {T<:BinaryPoly} = x.value
 Base.zero(::T) where {T<:BinaryPoly} = T(0)
 Base.zero(::Type{T}) where {T<:BinaryPoly} = T(0)
 Base.one(::T) where {T<:BinaryPoly} = T(1)
@@ -18,8 +17,6 @@ macro define_binary_poly(uint_size)
         struct $(gf2_elem_type) <: BinaryPoly
             value::$(uint_type)
         end
-
-        $(esc(:primitive_type))(::Type{$(gf2_elem_type)}) = $(uint_type)
     end
 
 end
@@ -30,11 +27,22 @@ end
 @define_binary_poly 64
 @define_binary_poly 128
 
+struct BinaryPoly256 <: BinaryPoly
+    value::Tuple{UInt128, UInt128}
+end
+
+# Stuff that depends on struct definitions
+binary_val(x::T) where {T<:BinaryPoly} = x.value
+primitive_type(::Type{T}) where T <: BinaryPoly = fieldtypes(T)[1]
+
 Random.rand(rng::Random.AbstractRNG, ::Random.SamplerType{T}) where {T<:BinaryPoly} = T(rand(rng, primitive_type(T)))
+
 Base.convert(::Type{T}, v::U) where {T<:BinaryPoly,U<:BinaryPoly} = T(binary_val(v))
+Base.convert(::Type{BinaryPoly256}, v::Tuple{BinaryPoly, BinaryPoly128}) = T(binary_val.(v))
 Base.convert(::Type{T}, x) where {T<:BinaryPoly} = T(x)
 
 +(a::T, b::T) where {T<:BinaryPoly} = T(binary_val(a) ⊻ binary_val(b))
+
 <<(a::T, n::Int) where {T<:BinaryPoly} = T(binary_val(a) << n)
 >>(a::T, n::Int) where {T<:BinaryPoly} = T(binary_val(a) >> n)
 
@@ -58,6 +66,8 @@ function split(x::T) where {T <: BinaryPoly}
 
     hi, lo
 end
+
+split(x::BinaryPoly256) = BinaryPoly128.(binary_val(x))
 
 shift_upper_bits(a::BinaryPoly64) = BinaryPoly128(UInt128(binary_val(a)) << 64)
 
@@ -95,8 +105,8 @@ shift_upper_bits(a::BinaryPoly64) = BinaryPoly128(UInt128(binary_val(a)) << 64)
 end
 
 function *(a::BinaryPoly128, b::BinaryPoly128)
-    a_lo, a_hi = split(a)
-    b_lo, b_hi = split(b)
+    a_hi, a_lo = split(a)
+    b_hi, b_lo = split(b)
 
     z0 = a_lo * b_lo
     z1 = (a_lo + a_hi) * (b_lo + b_hi)
@@ -104,13 +114,12 @@ function *(a::BinaryPoly128, b::BinaryPoly128)
 
     result_lo = z0
     result_hi = z2
-    result_mid_lo, result_mid_hi = split(z0 + z1 + z2)
+    result_mid_hi, result_mid_lo = split(z0 + z1 + z2)
 
     lo_bits = shift_upper_bits(result_mid_lo) + result_lo
     hi_bits = result_hi + convert(BinaryPoly128, result_mid_hi)
 
-    # XXX: Oh man, this is different from the way `reinterpret` works in Julia.
-    return (hi_bits, lo_bits)
+    return BinaryPoly256(binary_val.((hi_bits, lo_bits)))
 end
 
 function *(a::T, b::T) where {T <: Union{BinaryPoly8, BinaryPoly16, BinaryPoly32}}

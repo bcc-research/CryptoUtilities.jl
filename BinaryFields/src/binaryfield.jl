@@ -35,10 +35,9 @@ end
 
 function inv(a::T) where {T<:BinaryElem}
     q, r = div_irreducible(a) # p / a :: p = q*a + r 
-    _, t, s = egcd(poly(a), r)
-    # t*a + s*r = 1 = t*a + s*(p-q*a)
+    _, t, s = egcd(poly(a), r) # t*a + s*r = 1 = t*a + s*(p-q*a)
     # => (t-s*q)*a + s*p = 1
-    # => ^^^^^^^ is inv of a
+    # => ^^^^^^^ is inv of a modulo p, returned below
     T(t) + mod_irreducible(s * q)
 end
 
