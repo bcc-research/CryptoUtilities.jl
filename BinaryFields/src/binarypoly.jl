@@ -38,7 +38,7 @@ primitive_type(::Type{T}) where T <: BinaryPoly = fieldtypes(T)[1]
 Random.rand(rng::Random.AbstractRNG, ::Random.SamplerType{T}) where {T<:BinaryPoly} = T(rand(rng, primitive_type(T)))
 
 Base.convert(::Type{T}, v::U) where {T<:BinaryPoly,U<:BinaryPoly} = T(binary_val(v))
-Base.convert(::Type{BinaryPoly256}, v::Tuple{BinaryPoly, BinaryPoly128}) = T(binary_val.(v))
+Base.convert(::Type{BinaryPoly256}, v::Tuple{BinaryPoly128, BinaryPoly128}) = T(binary_val.(v))
 Base.convert(::Type{T}, x) where {T<:BinaryPoly} = T(x)
 
 +(a::T, b::T) where {T<:BinaryPoly} = T(binary_val(a) ⊻ binary_val(b))
