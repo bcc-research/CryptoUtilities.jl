@@ -37,16 +37,16 @@ end
 
 # TODO: Add nice comments here
 function ifft_twiddles!(v; twiddles, idx=1)
-  if length(v) == 1
-    return v
-  end
+    if length(v) == 1
+        return v
+    end
 
-  h1, h2 = split_half(v)
+    h1, h2 = split_half(v)
 
-  @views ifft_twiddles!(h1; twiddles, idx=2*idx)
-  @views ifft_twiddles!(h2; twiddles, idx=2*idx+1)
+    @views ifft_twiddles!(h1; twiddles, idx=2*idx)
+    @views ifft_twiddles!(h2; twiddles, idx=2*idx+1)
 
-  ifft_mul!(v, twiddles[idx])
+    ifft_mul!(v, twiddles[idx])
 end
 
 """
@@ -128,13 +128,33 @@ function fft_mul!(v, λ)
     end
 end
 
+# Unfortunately this seems to allocate a shitton and I cannot
+# get it to, well, not allocate. To fix for later.
+# function fft_mul!(v::T, λ::BinaryElem16) where {T <: AbstractVector{BinaryElem16}}
+#     u, w = split_half(v)
+#     if length(u) > 1
+#         up = reinterpret(BinaryFields.Elem2x16, u)
+#         wp = reinterpret(BinaryFields.Elem2x16, w)
+
+#         @views begin
+#             @. up .+= λ*wp
+#             wp .+= up
+#         end
+#     else
+#         @views begin
+#             @. u += λ*w
+#             w .+= u
+#         end
+#     end
+# end
+
 # TODO: Add nice comments here
 function ifft_mul!(v, λ)
-  lo, hi = split_half(v)
-  @views begin
-    hi .+= lo
-    @. lo += λ*hi
-  end
+    lo, hi = split_half(v)
+    @views begin
+        hi .+= lo
+        @. lo += λ*hi
+    end
 end
 
 
@@ -186,8 +206,8 @@ function fft!(v; twiddles)
 end
 
 function ifft!(v; twiddles)
-  n = length(v)
-  @assert is_pow_2(n)
+    n = length(v)
+    @assert is_pow_2(n)
 
-  ifft_twiddles!(v; twiddles)
+    ifft_twiddles!(v; twiddles)
 end

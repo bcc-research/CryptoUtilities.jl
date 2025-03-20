@@ -13,3 +13,17 @@ function mod_irreducible(a::BinaryPoly32)
 
     return BinaryElem16(res)
 end
+
+Elem2x16 = NTuple{2, BinaryElem16}
+
+# Hopefully this automatically SIMDs
+function *(a::Elem2x16, b::Elem2x16)
+    mod_irreducible.(poly.(a) * poly.(b))
+end
+
+function *(λ::BinaryElem16, b::Elem2x16)
+    λp = poly(λ)
+    mod_irreducible.(λp * poly.(b))
+end
+
++(a::Elem2x16, b::Elem2x16) = a .+ b

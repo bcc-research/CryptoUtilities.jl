@@ -38,7 +38,7 @@ primitive_type(::Type{T}) where T <: BinaryPoly = fieldtypes(T)[1]
 Random.rand(rng::Random.AbstractRNG, ::Random.SamplerType{T}) where {T<:BinaryPoly} = T(rand(rng, primitive_type(T)))
 
 Base.convert(::Type{T}, v::U) where {T<:BinaryPoly,U<:BinaryPoly} = T(binary_val(v))
-Base.convert(::Type{BinaryPoly256}, v::Tuple{BinaryPoly128, BinaryPoly128}) = T(binary_val.(v))
+Base.convert(::Type{BinaryPoly256}, v::NTuple{2, BinaryPoly128}) = T(binary_val.(v))
 Base.convert(::Type{T}, x) where {T<:BinaryPoly} = T(x)
 
 +(a::T, b::T) where {T<:BinaryPoly} = T(binary_val(a) ⊻ binary_val(b))
@@ -132,27 +132,32 @@ function *(a::BinaryPoly128, b::BinaryPoly128)
 end
 
 Poly2x16 = NTuple{2, BinaryPoly16}
+
+function embed_p64(a::Poly2x16)
+    # This should compile down to two loads on a quad register on aarch64?
+    res = UInt64(binary_val(a[2])) << 32 | binary_val(a[1])
+
+    return BinaryPoly64(res)
+end
+
+"""
+Perform 2x16 multiplication of a, b via 64 bit multiplication using
+(0 | a[2] | 0 | a[1] ) * (0 | b[2] | 0 | b[1]) and then unpacking
+"""
 function *(a::Poly2x16, b::Poly2x16)
-    a_32 = convert.(BinaryPoly32, a)
-    b_32 = convert.(BinaryPoly32, b)
-    a_64 = join(a_32...)
-    b_64 = join(b_32...)
+    a_64, b_64 = embed_p64(a), embed_p64(b)
+    res = a_64*b_64
 
-    result = a_64*b_64
+    res1 = saturate(BinaryPoly32, res)
+    res2 = saturate(BinaryPoly32, res >> 64)
 
-    return convert.(BinaryPoly32, split(result))
+    return (res1, res2)
 end
 
 function *(λ::BinaryPoly16, b::Poly2x16)
-    a_binarypoly32 = convert(BinaryPoly32, λ)
-    a_32 = (a_binarypoly32, a_binarypoly32)
-    b_32 = convert.(BinaryPoly32, b)
-    a_64 = join(a_32...)
-    b_64 = join(b_32...)
+    λ_a = (λ, λ)
 
-    result = a_64*b_64
-
-    return convert.(BinaryPoly32, split(result))
+    return λ_a * b
 end
 
 function *(a::T, b::T) where {T <: Union{BinaryPoly8, BinaryPoly16, BinaryPoly32}}
