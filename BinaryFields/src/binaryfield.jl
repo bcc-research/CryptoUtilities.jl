@@ -19,6 +19,9 @@ Random.rand(rng::Random.AbstractRNG, ::Random.SamplerType{T}) where T <: BinaryE
 export binary_val
 
 *(a::T, b::T) where T<: BinaryElem = mod_irreducible(poly(a)*poly(b))
+function *(λ::BinaryElem16, b::NTuple{2, BinaryElem16}) 
+    mod_irreducible.(poly(λ)*poly.(b))
+end
 +(a::T, b::T) where T<: BinaryElem = T(poly(a)+poly(b))
 
 # when we compute irreducible / a then we have to be careful since irreducible requires 1 more bit than maximal bitsize of our polynomial

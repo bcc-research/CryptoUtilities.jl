@@ -47,6 +47,15 @@ Base.convert(::Type{T}, x) where {T<:BinaryPoly} = T(x)
 >>(a::T, n::Int) where {T<:BinaryPoly} = T(binary_val(a) >> n)
 
 saturate(::Type{T}, a::U) where {T, U <: BinaryPoly} = T(binary_val(a) & typemax(primitive_type(T)))
+function join(a::T, b::T) where {T <: BinaryPoly} 
+    T_double = double_type(T)
+
+    a_double = convert(T_double, a)
+    a_double <<= sizeof(primitive_type(T)) * 8
+    b_double = convert(T_double, b)
+
+    return a_double + b_double
+end
 
 double_type(::Type{BinaryPoly8}) = BinaryPoly16
 double_type(::Type{BinaryPoly16}) = BinaryPoly32
@@ -120,6 +129,30 @@ function *(a::BinaryPoly128, b::BinaryPoly128)
     hi_bits = result_hi + convert(BinaryPoly128, result_mid_hi)
 
     return BinaryPoly256(binary_val.((hi_bits, lo_bits)))
+end
+
+Poly2x16 = NTuple{2, BinaryPoly16}
+function *(a::Poly2x16, b::Poly2x16)
+    a_32 = convert.(BinaryPoly32, a)
+    b_32 = convert.(BinaryPoly32, b)
+    a_64 = join(a_32...)
+    b_64 = join(b_32...)
+
+    result = a_64*b_64
+
+    return convert.(BinaryPoly32, split(result))
+end
+
+function *(λ::BinaryPoly16, b::Poly2x16)
+    a_binarypoly32 = convert(BinaryPoly32, λ)
+    a_32 = (a_binarypoly32, a_binarypoly32)
+    b_32 = convert.(BinaryPoly32, b)
+    a_64 = join(a_32...)
+    b_64 = join(b_32...)
+
+    result = a_64*b_64
+
+    return convert.(BinaryPoly32, split(result))
 end
 
 function *(a::T, b::T) where {T <: Union{BinaryPoly8, BinaryPoly16, BinaryPoly32}}

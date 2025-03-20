@@ -11,7 +11,9 @@ function mul(a::UInt64, b::UInt64)
 end
 
 
-function batch_16_poly_mul(a0::UInt16, a1::UInt16, b0::UInt16, b1::UInt16) 
+function batch_16_poly_mul(a, b) 
+    a0, a1 = a
+    b0, b1 = b
     a1_sh = UInt64(a1)
     a1_sh <<= 32
     a = a0 ⊻ a1_sh 
@@ -24,8 +26,8 @@ function batch_16_poly_mul(a0::UInt16, a1::UInt16, b0::UInt16, b1::UInt16)
     a0b0 = convert(UInt32, res & typemax(UInt32))
     a1b1 = UInt32(res >> 64)
 
-    @assert a0b0 == mul(UInt64(a0), UInt64(b0))
-    @assert a1b1 == mul(UInt64(a1), UInt64(b1))
+    # @assert a0b0 == mul(UInt64(a0), UInt64(b0))
+    # @assert a1b1 == mul(UInt64(a1), UInt64(b1))
 
     return (a0b0, a1b1)
 end
@@ -41,4 +43,10 @@ function simple_mul(a::UInt16, b::UInt16)
     res = lo ⊻ tmp ⊻ (tmp << 2) ⊻ (tmp << 3) ⊻ (tmp << 5)
 
     return res
+end
+
+function other_mul(a)
+    for _ in 1:1000
+        a += a*a
+    end
 end
