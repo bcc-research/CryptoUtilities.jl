@@ -75,7 +75,7 @@ function fft_twiddles_parallel!(v; twiddles, idx=1, thread_depth=nothing)
         if thread_depth > 0
           @info "Setting thread depth to $thread_depth"
         else
-          @info "Setting thread depth to 0 (did you launch julia with `--threads [thread_count]`?)"
+          @info "Setting thread depth to 0 (did you launch julia with `--threads=[thread_count]`?)"
         end
     end
 
@@ -128,25 +128,22 @@ function fft_mul!(v, λ)
     end
 end
 
-# Unfortunately this seems to allocate a shitton and I cannot
-# get it to, well, not allocate. To fix for later.
-# function fft_mul!(v::T, λ::BinaryElem16) where {T <: AbstractVector{BinaryElem16}}
-#     u, w = split_half(v)
-#     if length(u) > 1
-#         up = reinterpret(BinaryFields.Elem2x16, u)
-#         wp = reinterpret(BinaryFields.Elem2x16, w)
-
-#         @views begin
-#             @. up .+= λ*wp
-#             wp .+= up
-#         end
-#     else
-#         @views begin
-#             @. u += λ*w
-#             w .+= u
-#         end
-#     end
-# end
+# Ok this kind of works now, but it is slower than the above for some reason.
+# Probably for later.
+function fft_mul!(v::T, λ::BinaryElem16) where {T <: AbstractVector{BinaryElem16}}
+    u, w = split_half(v)
+    if length(u) > 1
+        @views begin
+            BinaryFields.scale_inplace_simd!(u, λ, v)
+            w .+= u
+        end
+    else
+        @views begin
+            @. u += λ*w
+            w .+= u
+        end
+    end
+end
 
 # TODO: Add nice comments here
 function ifft_mul!(v, λ)

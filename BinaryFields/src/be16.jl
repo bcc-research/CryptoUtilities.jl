@@ -16,14 +16,22 @@ end
 
 Elem2x16 = NTuple{2, BinaryElem16}
 
+# Assumes length is divisible by two and length(u) == length(v)
+function scale_inplace_simd!(u, λ::BinaryElem16, v)
+    @views for i in Iterators.partition(eachindex(u), 2)
+        vecelem = (v[i[1]], v[i[2]])
+        vecelem = λ*vecelem
+        u[i] .+= vecelem
+    end
+end
+
 # Hopefully this automatically SIMDs
 function *(a::Elem2x16, b::Elem2x16)
     mod_irreducible.(poly.(a) * poly.(b))
 end
 
 function *(λ::BinaryElem16, b::Elem2x16)
-    λp = poly(λ)
-    mod_irreducible.(λp * poly.(b))
+    mod_irreducible.(poly(λ) * poly.(b))
 end
 
-+(a::Elem2x16, b::Elem2x16) = a .+ b
++(a::Elem2x16, b::Elem2x16) = Elem2x16(a.value + b.value)
