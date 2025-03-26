@@ -4,7 +4,8 @@ struct BinaryElem16 <: BinaryElem
 end
 
 irreducible_poly(::Type{BinaryElem16}) = BinaryPoly16(UInt16(0b101101)) # a^16 + a^5 + a^3 + a^2 + 1, standard
-# Make these macro-generated
+
+# XXX: Make these macro-generated
 function mod_irreducible(a::BinaryPoly32)
     (hi, lo) = split(a)
 
@@ -13,25 +14,3 @@ function mod_irreducible(a::BinaryPoly32)
 
     return BinaryElem16(res)
 end
-
-Elem2x16 = NTuple{2, BinaryElem16}
-
-# Assumes length is divisible by two and length(u) == length(v)
-function scale_inplace_simd!(u, λ::BinaryElem16, v)
-    @views for i in Iterators.partition(eachindex(u), 2)
-        vecelem = (v[i[1]], v[i[2]])
-        vecelem = λ*vecelem
-        u[i] .+= vecelem
-    end
-end
-
-# Hopefully this automatically SIMDs
-function *(a::Elem2x16, b::Elem2x16)
-    mod_irreducible.(poly.(a) * poly.(b))
-end
-
-function *(λ::BinaryElem16, b::Elem2x16)
-    mod_irreducible.(poly(λ) * poly.(b))
-end
-
-+(a::Elem2x16, b::Elem2x16) = Elem2x16(a.value + b.value)

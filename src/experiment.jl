@@ -50,3 +50,27 @@ function other_mul(a)
         a += a*a
     end
 end
+
+function batch_16_poly_mul_ll_simd(a0::UInt32, a1::UInt32, b0::UInt32, b1::UInt32)
+    llvm_ir = """
+    define { i64, i64 } @batch_mul(i32 %a0, i32 %a1, i32 %b0, i32 %b1) {
+        ; Extend inputs to 64-bit and pack
+        %a0_zext = zext i32 %a0 to i64
+        %a1_zext = zext i32 %a1 to i64
+        %a1_shl = shl i64 %a1_zext, 32
+        %a = xor i64 %a0_zext, %a1_shl
+
+        %b0_zext = zext i32 %b0 to i64
+        %b1_zext = zext i32 %b1 to i64
+        %b1_shl = shl i64 %b1_zext, 32
+        %b = xor i64 %b0_zext, %b1_shl
+
+        ; Create return struct: { i64, i64 }
+        %result = insertvalue { i64, i64 } undef, i64 %a, 0
+        %result2 = insertvalue { i64, i64 } %result, i64 %b, 1
+        ret { i64, i64 } %result2
+    }
+    """
+    return Base.llvmcall((llvm_ir, "batch_mul"), Tuple{UInt32,UInt32},
+                         Tuple{UInt32,UInt32,UInt32,UInt32}, a0, a1, b0, b1)
+end

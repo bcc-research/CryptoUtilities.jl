@@ -5,7 +5,7 @@ end
 
 irreducible_poly(::Type{BinaryElem128}) = BinaryPoly128(UInt128(0b10000111)) # x^128 + x^7 + x^2 + x + 1, standard
 
-# Make these macro-generated
+# XXX: Make these macro-generated
 function mod_irreducible(a::BinaryPoly256)
     (hi, lo) = split(a)
 

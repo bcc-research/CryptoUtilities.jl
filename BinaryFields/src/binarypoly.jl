@@ -131,35 +131,6 @@ function *(a::BinaryPoly128, b::BinaryPoly128)
     return BinaryPoly256(binary_val.((hi_bits, lo_bits)))
 end
 
-Poly2x16 = NTuple{2, BinaryPoly16}
-
-function embed_p64(a::Poly2x16)
-    # This should compile down to two loads on a quad register on aarch64?
-    res = UInt64(binary_val(a[2])) << 32 | binary_val(a[1])
-
-    return BinaryPoly64(res)
-end
-
-"""
-Perform 2x16 multiplication of a, b via 64 bit multiplication using
-(0 | a[2] | 0 | a[1] ) * (0 | b[2] | 0 | b[1]) and then unpacking
-"""
-function *(a::Poly2x16, b::Poly2x16)
-    a_64, b_64 = embed_p64(a), embed_p64(b)
-    res = a_64*b_64
-
-    res1 = saturate(BinaryPoly32, res)
-    res2 = saturate(BinaryPoly32, res >> 64)
-
-    return (res1, res2)
-end
-
-function *(λ::BinaryPoly16, b::Poly2x16)
-    λ_a = (λ, λ)
-
-    return λ_a * b
-end
-
 function *(a::T, b::T) where {T <: Union{BinaryPoly8, BinaryPoly16, BinaryPoly32}}
     res = convert(BinaryPoly64, a) * convert(BinaryPoly64, b)
 

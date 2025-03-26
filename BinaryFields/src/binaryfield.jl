@@ -53,3 +53,22 @@ function embed(a::T, ::Type{U}) where {T<:BinaryElem, U<:BinaryElem}
 
     U(res)
 end
+
+function xor_selected(x::UInt16, a::Vector{UInt128})
+    result = UInt128(0)
+    for i in 0:15
+        if (x >> i) & 0x1 == 1
+            result ⊻= a[i + 1]
+        end
+    end
+    return result
+end
+
+function just_wrap(xs::Vector{UInt16}, as::Vector{Vector{UInt128}})
+    n = length(xs)
+    results = Vector{UInt128}(undef, n)
+    for i in 1:n
+        results[i] = xor_selected(xs[i], as[i])
+    end
+    return results
+end

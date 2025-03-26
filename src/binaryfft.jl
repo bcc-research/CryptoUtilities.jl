@@ -128,23 +128,6 @@ function fft_mul!(v, λ)
     end
 end
 
-# Ok this kind of works now, but it is slower than the above for some reason.
-# Probably for later.
-function fft_mul!(v::T, λ::BinaryElem16) where {T <: AbstractVector{BinaryElem16}}
-    u, w = split_half(v)
-    if length(u) > 1
-        @views begin
-            BinaryFields.scale_inplace_simd!(u, λ, v)
-            w .+= u
-        end
-    else
-        @views begin
-            @. u += λ*w
-            w .+= u
-        end
-    end
-end
-
 # TODO: Add nice comments here
 function ifft_mul!(v, λ)
     lo, hi = split_half(v)
