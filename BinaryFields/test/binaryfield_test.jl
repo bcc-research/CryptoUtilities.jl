@@ -65,7 +65,7 @@ end
     end
 end
 
-@testset "BinaryField Convert" begin
+@testset "BinaryField Convert and Promote" begin
     for T in [BinaryElem16, BinaryElem32]
         for _ in 1:100
             a = rand(T)
@@ -75,9 +75,9 @@ end
             @test a_conv == a * BinaryElem128(1)
 
             # Test subfield condition
-            @test a^(2^BinaryFields.bitsize(T)) == a
+            @test a_conv^(2^BinaryFields.bitsize(T)) == a_conv
             if a != zero(T)
-                @test a^(2^BinaryFields.bitsize(T) - 2)*a == one(T)
+                @test a_conv^(2^BinaryFields.bitsize(T) - 2)*a_conv == one(BinaryElem128)
             end
         end
     end
