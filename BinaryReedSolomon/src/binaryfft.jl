@@ -1,6 +1,5 @@
 using Base.Threads
 
-export fft!, ifft!, compute_twiddles
 
 """
     fft_twiddles!(v; twiddles, idx=1)
@@ -65,17 +64,19 @@ Parallel recursive FFT step using pre-calculated twiddle factors. Operates in-pl
 - `thread_depth` controls parallelism; optimize to balance overhead and benefit.
 - Default `thread_depth` is inferred and logged if not provided.
 """
-function fft_twiddles_parallel!(v; twiddles, idx=1, thread_depth=nothing)
+function fft_twiddles_parallel!(v; twiddles, idx=1, thread_depth=nothing, verbose=false)
     if length(v) == 1
         return v
     end
 
     if isnothing(thread_depth)
         thread_depth = round(Int, log2(nthreads()))
-        if thread_depth > 0
-          @info "Setting thread depth to $thread_depth"
-        else
-          @info "Setting thread depth to 0 (did you launch julia with `--threads=[thread_count]`?)"
+        if verbose
+            if thread_depth > 0
+            @info "Setting thread depth to $thread_depth"
+            else
+            @info "Setting thread depth to 0 (did you launch julia with `--threads=[thread_count]`?)"
+            end
         end
     end
 
@@ -178,12 +179,12 @@ function precompute_basis_scalers_at_layer_k!(p, k, sk_at_vk)
 end
 
 
-function fft!(v; twiddles, parallel=true)
+function fft!(v; twiddles, parallel=false, verbose=false)
     n = length(v)
     @assert is_pow_2(n)
 
     if parallel
-        fft_twiddles_parallel!(v; twiddles)
+        fft_twiddles_parallel!(v; twiddles, verbose)
     else
         fft_twiddles!(v; twiddles)
     end

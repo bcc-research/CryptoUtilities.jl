@@ -1,6 +1,6 @@
 name = "BinaryReedSolomon"
 uuid = "8a283c49-c6d0-46c5-bbc1-5b2a51f34960"
-authors = ["Andrija <akinovak@gmail.com>"]
+authors = ["Andrija <akinovak@gmail.com>", "guille <guille@angeris.net>"]
 version = "0.1.0"
 
 [deps]

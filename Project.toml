@@ -1,6 +1,6 @@
 name = "CryptoUtilities"
 uuid = "90083120-872f-41d2-afe2-c3d86d602edb"
-authors = ["angeris <guille@angeris.net>"]
+authors = ["angeris <guille@angeris.net>", "akinovak <akinovak@gmail.com>"]
 version = "0.1.0"
 
 [deps]
