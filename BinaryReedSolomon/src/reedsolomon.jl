@@ -3,7 +3,7 @@ mutable struct ReedSolomonEncoding{T <: BinaryElem}
     log_block_length::UInt
     twiddles::Union{Nothing, Vector{T}}
 
-    function ReedSolomonEncoding{T}(log_message_length, log_block_length) where T <: BinaryElem
+    function ReedSolomonEncoding{T}(log_message_length, log_block_length; compute_twiddles=true) where T <: BinaryElem
         return new{T}(
             log_message_length,
             log_block_length,
@@ -41,18 +41,35 @@ function short_from_long_tw(l_tw, n, k)
 	return s_tw
 end
 
+function short_from_long_twiddles(rs::ReedSolomonEncoding{T}) where T 
+    
+    short_from_long_tw(rs.twiddles, log_block_length(rs), log_message_length(rs))
+end
+
 function encode(rs::ReedSolomonEncoding{T}, message::Vector{T}; verbose=false) where T
+    message_coeffs = zeros(T, block_length(rs))
+
+    message_coeffs_view = @view v[1:message_length(rs)]
+    message_coeffs_view .= message
+
+    encode!(rs, message_coeffs; verbose)
+
+    return message_coeffs
+end
+
+function encode!(rs::ReedSolomonEncoding{T}, v::Vector{T}; verbose=false, fill_zeros=true, short_twiddles=nothing) where T
     @assert length(message) == message_length(rs)
     @assert !isnothing(rs.twiddles)
 
-    message_coeffs = zeros(T, block_length(rs))
-    message_coeffs_view = @view message_coeffs[1:message_length(rs)]
-    message_coeffs_view .= message
+    message_coeffs_view = @view v[1:message_length(rs)]
+    if fill_zeros
+        message_coeffs_view[message_length(rs):end] .= T(0)
+    end
 
-    s_tw = short_from_long_tw(rs.twiddles, log_block_length(rs), log_message_length(rs))
+    s_tw = isnothing(short_twiddles) ? short_from_long_tw(rs.twiddles, log_block_length(rs), log_message_length(rs)) : short_twiddles
 
     ifft!(message_coeffs_view; twiddles=s_tw)
-    fft!(message_coeffs, twiddles=rs.twiddles; verbose);
+    fft!(v, twiddles=rs.twiddles; verbose);
 
     return message_coeffs
 end

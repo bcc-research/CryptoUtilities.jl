@@ -22,8 +22,7 @@ end
     n, m = 10, 12
 
     for T in [BinaryElem16, BinaryElem32, BinaryElem128]
-        rs = ReedSolomonEncoding{T}(n, m)
-        compute_twiddles!(rs)
+        rs = reed_solomon(T, 2^n, 2^m)
 
         v = rand(T, 2^n)
         output = encode(rs, v)
