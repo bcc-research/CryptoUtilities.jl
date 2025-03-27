@@ -1,8 +1,8 @@
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.11.4"
+julia_version = "1.11.2"
 manifest_format = "2.0"
-project_hash = "83be35d2e80b46a8b944a5bbd1693504c3a2db06"
+project_hash = "1d87488db584e018ae0911ea1f1282fedc19b54b"
 
 [[deps.Artifacts]]
 uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
@@ -56,6 +56,12 @@ version = "1.11.0"
 deps = ["Base64"]
 uuid = "d6f4376e-aef5-505a-96c1-9c027394607a"
 version = "1.11.0"
+
+[[deps.MerkleTree]]
+deps = ["SHA"]
+path = "MerkleTree"
+uuid = "225b011c-e439-4471-b39b-04a9a0fe32f0"
+version = "0.1.0"
 
 [[deps.OpenBLAS_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Libdl"]
