@@ -46,3 +46,39 @@ end
         @test_throws AssertionError inv(zero_elem) # div_irreducible asserts a != 0
     end
 end
+
+@testset "BinaryField Powers" begin
+    for T in [BinaryElem16, BinaryElem32]
+        for _ in 1:100
+            a = rand(T)
+
+            # Test base cases
+            @test a^0 == one(T)
+            @test a^1 == a
+
+            # Test subfield condition
+            @test a^(2^BinaryFields.bitsize(T)) == a
+            if a != zero(T)
+                @test a^(2^BinaryFields.bitsize(T) - 2)*a == one(T)
+            end
+        end
+    end
+end
+
+@testset "BinaryField Convert" begin
+    for T in [BinaryElem16, BinaryElem32]
+        for _ in 1:100
+            a = rand(T)
+            a_conv = convert(BinaryElem128, a)
+            
+            # Test promote_rule
+            @test a_conv == a * BinaryElem128(1)
+
+            # Test subfield condition
+            @test a^(2^BinaryFields.bitsize(T)) == a
+            if a != zero(T)
+                @test a^(2^BinaryFields.bitsize(T) - 2)*a == one(T)
+            end
+        end
+    end
+end

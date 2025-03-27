@@ -110,6 +110,55 @@ function mod_irreducible(a::T) where T <: BinaryPoly
     return get_elem_type(Th)(res)
 end
 
+function ^(a::T, n::U) where {T <: BinaryElem, U <: Integer}
+    if a == zero(T)
+        return zero(T)
+    end
+
+    t = one(T)
+
+    while n > 0
+        if n & 1 == 1
+            t *= a
+        end
+        a *= a
+        n >>= 1
+    end
+
+    return t
+end
+
+@generated function betas(::Type{T}) where T <: Union{BinaryElem16, BinaryElem32}
+    bsize = bitsize(T)
+    beta = (BinaryElem128(BinaryPoly128(2)))^div(BigInt(2)^128 - 1, 2^bsize - 1)
+    bs = Vector{BinaryElem128}(undef, bsize)
+    bs[1] = beta
+
+    for (i, _) in enumerate(bs)
+        if i == 1
+            continue
+        end
+        bs[i] = bs[i-1]*beta
+    end
+
+    :($(bs))
+end
+
+promote_rule(::Type{BinaryElem128}, ::Type{T}) where T <: BinaryElem = BinaryElem128
+
+function convert(::Type{BinaryElem128}, x::T) where T <: Union{BinaryElem16, BinaryElem32}
+    result = BinaryElem128(0)
+    bs = betas(T)
+    x_bits = binary_val(x)
+    for i in 0:bitsize(T)-1
+        if (x_bits >> i) & 1 == 1
+            result += bs[i + 1]
+        end
+    end
+
+    return result
+end
+
 # Note: The following code is unwrapped generic implementation of mod_irreducible
 # function mod_irreducible(a::BinaryPoly64)
 # irreducible = a^32 + a^15 + a^9 + a^7 + x^4 + x^3 + 1, standard
