@@ -18,31 +18,9 @@ message_length(rs::ReedSolomonEncoding) = 2^log_message_length(rs)
 log_block_length(rs::ReedSolomonEncoding) = rs.log_block_length
 block_length(rs::ReedSolomonEncoding) = 2^log_block_length(rs)
 
-# --- Twiddles stuff ---
-function compute_twiddles!(twiddles, beta, k)
-    layer = Vector{typeof(beta)}(undef, 2^(k - 1))
-    write_at = 2^(k - 1)
-    s_prev_at_root = layer_0!(layer, beta, k)
-    @views twiddles[write_at:end] .= layer 
-
-
-    for _ in 1:(k - 1) 
-		write_at >>= 1
-		# notice that layer_len = write_at 
-		layer_len = write_at
-		s_prev_at_root = layer_i!(layer, layer_len, s_prev_at_root)
-
-		s_inv = inv(s_prev_at_root)
-		@views @. twiddles[write_at:write_at+layer_len-1] = s_inv * layer[1:layer_len]
-    end
-end
 
 function compute_twiddles!(rs::ReedSolomonEncoding{T}; beta=T(0)) where T
-    twiddles = Vector{T}(undef, block_length(rs) - 1)
-
-    compute_twiddles!(twiddles, beta, log_block_length(rs))
-    
-    rs.twiddles = twiddles
+    rs.twiddles = compute_twiddles(T, log_block_length(rs); beta)
 end
 
 # Converts twiddles from long vector to twiddles from shorter one

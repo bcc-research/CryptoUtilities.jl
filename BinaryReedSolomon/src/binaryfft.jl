@@ -1,6 +1,6 @@
 using Base.Threads
 
-export fft!, ifft!
+export fft!, ifft!, compute_twiddles
 
 """
     fft_twiddles!(v; twiddles, idx=1)
@@ -178,11 +178,15 @@ function precompute_basis_scalers_at_layer_k!(p, k, sk_at_vk)
 end
 
 
-function fft!(v; twiddles)
+function fft!(v; twiddles, parallel=true)
     n = length(v)
     @assert is_pow_2(n)
 
-    fft_twiddles_parallel!(v; twiddles)
+    if parallel
+        fft_twiddles_parallel!(v; twiddles)
+    else
+        fft_twiddles!(v; twiddles)
+    end
 end
 
 function ifft!(v; twiddles)
@@ -190,4 +194,31 @@ function ifft!(v; twiddles)
     @assert is_pow_2(n)
 
     ifft_twiddles!(v; twiddles)
+end
+
+# --- Twiddles stuff ---
+function compute_twiddles!(twiddles::Vector{T}, k; beta=T(0)) where T <: BinaryElem
+    layer = Vector{T}(undef, 2^(k - 1))
+    write_at = 2^(k - 1)
+    s_prev_at_root = layer_0!(layer, beta, k)
+    @views twiddles[write_at:end] .= layer 
+
+
+    for _ in 1:(k - 1) 
+		write_at >>= 1
+		# notice that layer_len = write_at 
+		layer_len = write_at
+		s_prev_at_root = layer_i!(layer, layer_len, s_prev_at_root)
+
+		s_inv = inv(s_prev_at_root)
+		@views @. twiddles[write_at:write_at+layer_len-1] = s_inv * layer[1:layer_len]
+    end
+end
+
+function compute_twiddles(::Type{T}, log_n; beta=T(0)) where T <: BinaryElem
+    twiddles = Vector{T}(undef, 2^log_n - 1)
+
+    compute_twiddles!(twiddles, log_n; beta)
+
+    return twiddles
 end

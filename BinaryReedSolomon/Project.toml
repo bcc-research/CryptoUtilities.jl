@@ -2,3 +2,6 @@ name = "BinaryReedSolomon"
 uuid = "8a283c49-c6d0-46c5-bbc1-5b2a51f34960"
 authors = ["Andrija <akinovak@gmail.com>"]
 version = "0.1.0"
+
+[deps]
+BinaryFields = "0fee9d7f-8397-4f0d-9ec6-117db1666467"
