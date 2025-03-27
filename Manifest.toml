@@ -1,8 +1,8 @@
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.11.2"
+julia_version = "1.11.4"
 manifest_format = "2.0"
-project_hash = "4f8d63a55b5ff5a024223cd43a243a2557cc3477"
+project_hash = "83be35d2e80b46a8b944a5bbd1693504c3a2db06"
 
 [[deps.Artifacts]]
 uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
@@ -16,6 +16,12 @@ version = "1.11.0"
 deps = ["Random", "SIMD"]
 path = "BinaryFields"
 uuid = "0fee9d7f-8397-4f0d-9ec6-117db1666467"
+version = "0.1.0"
+
+[[deps.BinaryReedSolomon]]
+deps = ["BinaryFields"]
+path = "BinaryReedSolomon"
+uuid = "8a283c49-c6d0-46c5-bbc1-5b2a51f34960"
 version = "0.1.0"
 
 [[deps.CompilerSupportLibraries_jll]]

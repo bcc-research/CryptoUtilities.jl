@@ -49,7 +49,7 @@ end
 function encode(rs::ReedSolomonEncoding{T}, message::Vector{T}; verbose=false) where T
     message_coeffs = zeros(T, block_length(rs))
 
-    message_coeffs_view = @view v[1:message_length(rs)]
+    message_coeffs_view = @view message_coeffs[1:message_length(rs)]
     message_coeffs_view .= message
 
     encode!(rs, message_coeffs; verbose)
@@ -58,7 +58,7 @@ function encode(rs::ReedSolomonEncoding{T}, message::Vector{T}; verbose=false) w
 end
 
 function encode!(rs::ReedSolomonEncoding{T}, v::Vector{T}; verbose=false, fill_zeros=true, short_twiddles=nothing) where T
-    @assert length(message) == message_length(rs)
+    @assert length(v) == block_length(rs)
     @assert !isnothing(rs.twiddles)
 
     message_coeffs_view = @view v[1:message_length(rs)]
@@ -71,7 +71,7 @@ function encode!(rs::ReedSolomonEncoding{T}, v::Vector{T}; verbose=false, fill_z
     ifft!(message_coeffs_view; twiddles=s_tw)
     fft!(v, twiddles=rs.twiddles; verbose);
 
-    return message_coeffs
+    v
 end
 
 function reed_solomon(::Type{T}, message_length, block_length) where T
