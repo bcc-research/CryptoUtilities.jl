@@ -1,4 +1,9 @@
+module MerkleTree
+
 using SHA
+
+export build_merkle_tree, get_root, get_depth
+export create_proof, verify_proof
 
 # for now simply assume that isbitstype(T) = true
 hash_leaf(leaf::Vector{T}) where T = sha256(reinterpret(UInt8, leaf))
@@ -155,5 +160,4 @@ function verify_proof(root, depth, leaves, leaf_queries, batched_proof)
     return layer[1] == root
 end
 
-export build_merkle_tree, get_root, get_depth
-export create_proof, verify_proof
+end # module MerkleTree

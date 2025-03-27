@@ -26,7 +26,6 @@ macro define_binary_elem(uint_size)
             poly::$(poly_type)
         end
     end
-
 end
 
 @define_binary_elem 8

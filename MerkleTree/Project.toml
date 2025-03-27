@@ -1,0 +1,10 @@
+name = "MerkleTree"
+uuid = "225b011c-e439-4471-b39b-04a9a0fe32f0"
+authors = ["Andrija <akinovak@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+SHA = "ea8e919c-243c-51af-8825-aaa63cd721ce"
+
+[compat]
+SHA = "0.7.0"

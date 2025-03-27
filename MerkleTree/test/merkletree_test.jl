@@ -1,6 +1,3 @@
-using CryptoUtilities
-using Random
-
 n = 20
 K = 4
 Q = 1000
@@ -25,16 +22,17 @@ function generate_random_leaves(N, K)
     return [rand(UInt16, K) for _ in 1:N]
 end
 
-leaves = generate_random_leaves(N, K)
-tree = build_merkle_tree(leaves)
+@testset "Random leaves" begin
+    leaves = generate_random_leaves(N, K)
+    tree = build_merkle_tree(leaves)
 
-queries = sample(N, Q)
+    queries = sample(N, Q)
 
-proof = create_proof(tree, queries)
+    proof = create_proof(tree, queries)
 
-queried_leaves = [leaves[q + 1] for q in queries]
-depth = get_depth(tree)
-root = get_root(tree)
+    queried_leaves = [leaves[q + 1] for q in queries]
+    depth = get_depth(tree)
+    root = get_root(tree)
 
-res = verify_proof(root, depth, queried_leaves, queries, proof)
-@assert res == true
+    @test verify_proof(root, depth, queried_leaves, queries, proof)
+end
