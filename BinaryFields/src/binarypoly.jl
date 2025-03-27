@@ -34,6 +34,7 @@ end
 # Stuff that depends on struct definitions
 binary_val(x::T) where {T<:BinaryPoly} = x.value
 primitive_type(::Type{T}) where T <: BinaryPoly = fieldtypes(T)[1]
+bitsize(::Type{T}) where T <: BinaryPoly = sizeof(T) * 8
 
 Random.rand(rng::Random.AbstractRNG, ::Random.SamplerType{T}) where {T<:BinaryPoly} = T(rand(rng, primitive_type(T)))
 
@@ -66,6 +67,7 @@ half_type(::Type{BinaryPoly16}) = BinaryPoly8
 half_type(::Type{BinaryPoly32}) = BinaryPoly16
 half_type(::Type{BinaryPoly64}) = BinaryPoly32
 half_type(::Type{BinaryPoly128}) = BinaryPoly64
+half_type(::Type{BinaryPoly256}) = BinaryPoly128
 
 function split(x::T) where {T <: BinaryPoly} 
     T_half = half_type(T)

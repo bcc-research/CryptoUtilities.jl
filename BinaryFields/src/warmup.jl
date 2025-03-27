@@ -1,9 +1,7 @@
 begin 
-    a = BinaryElem16(1)
-    b = BinaryElem16(2)
-    a*b
-
-    a = BinaryElem128(1)
-    b = BinaryElem128(2)
-    a*b
+    for T in [BinaryElem16, BinaryElem32, BinaryElem128]
+        a = T(1)
+        b = T(2)
+        a*b
+    end
 end
