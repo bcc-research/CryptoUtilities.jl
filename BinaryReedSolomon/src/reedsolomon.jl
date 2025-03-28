@@ -42,11 +42,10 @@ function short_from_long_tw(l_tw, n, k)
 end
 
 function short_from_long_twiddles(rs::ReedSolomonEncoding{T}) where T 
-    
     short_from_long_tw(rs.twiddles, log_block_length(rs), log_message_length(rs))
 end
 
-function encode(rs::ReedSolomonEncoding{T}, message::Vector{T}; verbose=false) where T
+function encode(rs::ReedSolomonEncoding{T}, message; verbose=false) where T
     message_coeffs = zeros(T, block_length(rs))
 
     message_coeffs_view = @view message_coeffs[1:message_length(rs)]
@@ -57,7 +56,7 @@ function encode(rs::ReedSolomonEncoding{T}, message::Vector{T}; verbose=false) w
     return message_coeffs
 end
 
-function encode!(rs::ReedSolomonEncoding{T}, v::Vector{T}; verbose=false, fill_zeros=true, short_twiddles=nothing) where T
+function encode!(rs::ReedSolomonEncoding{T}, v; verbose=false, fill_zeros=true, short_twiddles=nothing) where T
     @assert length(v) == block_length(rs)
     @assert !isnothing(rs.twiddles)
 
