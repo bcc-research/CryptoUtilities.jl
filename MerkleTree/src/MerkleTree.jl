@@ -6,7 +6,7 @@ export build_merkle_tree, get_root, get_depth
 export create_proof, verify_proof
 
 # for now simply assume that isbitstype(T) = true
-hash_leaf(leaf::Vector{T}) where T = sha256(reinterpret(UInt8, leaf))
+hash_leaf(leaf) = sha256(reinterpret(UInt8, leaf))
 hash_siblings(left_hash::Vector{UInt8}, right_hash::Vector{UInt8}) = sha256(vcat(left_hash, right_hash))
 
 function hash_siblings_hex(left_hash::String, right_hash::String)
@@ -21,7 +21,7 @@ function is_power_of_two(n::Int)
     return n > 0 && (n & (n - 1)) == 0
 end
 
-function build_merkle_tree(leaves::Vector{Vector{T}}) where T
+function build_merkle_tree(leaves)
     @assert is_power_of_two(length(leaves))
     if isempty(leaves)
         return []

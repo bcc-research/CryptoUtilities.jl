@@ -46,11 +46,10 @@ function short_from_long_twiddles(rs::ReedSolomonEncoding{T}) where T
 end
 
 function encode(rs::ReedSolomonEncoding{T}, message; verbose=false) where T
+    @assert length(message) == message_length(rs)
+
     message_coeffs = zeros(T, block_length(rs))
-
-    message_coeffs_view = @view message_coeffs[1:message_length(rs)]
-    message_coeffs_view .= message
-
+    message_coeffs[1:message_length(rs)] .= message
     encode!(rs, message_coeffs; verbose, fill_zeros=false)
 
     return message_coeffs
