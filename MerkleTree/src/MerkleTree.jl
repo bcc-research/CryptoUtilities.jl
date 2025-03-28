@@ -94,6 +94,8 @@ function create_proof(tree_levels, queries)
     depth = length(tree_levels) - 1
 
     queries_buff = copy(queries)
+
+    queries_buff .-= 1
     queries_cnt = length(queries)
     for i in 1:depth
         queries_cnt = ith_layer!(tree_levels[i], queries_cnt, queries_buff, proof)
@@ -149,6 +151,8 @@ function verify_proof(root, depth, leaves, leaf_queries, batched_proof)
     proof = copy(batched_proof)
     layer = [bytes2hex(hash_leaf(leaf)) for leaf in leaves]
     queries = copy(leaf_queries)
+
+    queries .-= 1
 
     curr_cnt = length(queries)
     proof_cnt = 0
