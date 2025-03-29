@@ -1,6 +1,5 @@
 using Base.Threads
 
-
 """
     fft_twiddles!(v; twiddles, idx=1)
 
@@ -203,7 +202,6 @@ function compute_twiddles!(twiddles::Vector{T}, k; beta=T(0)) where T <: BinaryE
     write_at = 2^(k - 1)
     s_prev_at_root = layer_0!(layer, beta, k)
     @views twiddles[write_at:end] .= layer 
-
 
     for _ in 1:(k - 1) 
 		write_at >>= 1

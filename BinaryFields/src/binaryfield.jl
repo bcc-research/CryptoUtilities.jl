@@ -132,7 +132,7 @@ end
     bsize = bitsize(T)
     beta = (BinaryElem128(BinaryPoly128(2)))^div(BigInt(2)^128 - 1, 2^bsize - 1)
     bs = Vector{BinaryElem128}(undef, bsize)
-    bs[1] = beta
+    bs[1] = BinaryElem128(1)
 
     for (i, _) in enumerate(bs)
         if i == 1
@@ -150,9 +150,10 @@ function convert(::Type{BinaryElem128}, x::T) where T <: Union{BinaryElem16, Bin
     result = BinaryElem128(0)
     bs = betas(T)
     x_bits = binary_val(x)
+
     for i in 0:bitsize(T)-1
         if (x_bits >> i) & 1 == 1
-            result += bs[i + 1]
+            result += bs[i+1]
         end
     end
 
