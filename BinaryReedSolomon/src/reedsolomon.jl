@@ -18,7 +18,6 @@ message_length(rs::ReedSolomonEncoding) = 2^log_message_length(rs)
 log_block_length(rs::ReedSolomonEncoding) = rs.log_block_length
 block_length(rs::ReedSolomonEncoding) = 2^log_block_length(rs)
 
-
 function compute_twiddles!(rs::ReedSolomonEncoding{T}; beta=T(0)) where T
     rs.twiddles = compute_twiddles(T, log_block_length(rs); beta)
 end

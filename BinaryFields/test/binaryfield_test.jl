@@ -65,20 +65,58 @@ end
     end
 end
 
-@testset "BinaryField Convert and Promote" begin
-    for T in [BinaryElem16, BinaryElem32]
-        for _ in 1:100
-            a = rand(T)
-            a_conv = convert(BinaryElem128, a)
-            
-            # Test promote_rule
-            @test a_conv == a * BinaryElem128(1)
-
-            # Test subfield condition
-            @test a_conv^(2^BinaryFields.bitsize(T)) == a_conv
-            if a != zero(T)
-                @test a_conv^(2^BinaryFields.bitsize(T) - 2)*a_conv == one(BinaryElem128)
+@testset "BinaryField Convert and Mapping" begin
+    @testset "promote_rule" begin
+        for T in [BinaryElem16, BinaryElem32]
+            for _ in 1:100
+                a = rand(T)
+                a_conv = convert(BinaryElem128, a)
+                
+                @test a_conv == a * BinaryElem128(1)
             end
         end
     end
+
+    @testset "Subfield condition" begin
+        for T in [BinaryElem16, BinaryElem32]
+            for _ in 1:100
+                a = rand(T)
+                a_conv = convert(BinaryElem128, a)
+
+                @test a_conv^(2^BinaryFields.bitsize(T)) == a_conv
+                if a != zero(T)
+                    @test a_conv^(2^BinaryFields.bitsize(T) - 2)*a_conv == one(BinaryElem128)
+                end
+            end
+        end
+    end
+
+    @testset "Addition and multiplication preserved" begin
+        for T in [BinaryElem16, BinaryElem32]
+            for _ in 1:100
+                a = rand(T)
+                a_conv = convert(BinaryElem128, a)
+
+                b = rand(T)
+                b_conv = convert(BinaryElem128, b)
+
+                @test convert(BinaryElem128, a+b) == a_conv+b_conv
+                @test convert(BinaryElem128, a*b) == a_conv*b_conv
+            end
+        end
+    end
+
+    @testset "Inverse preserved" begin
+        for T in [BinaryElem16, BinaryElem32]
+            for _ in 1:100
+                a = rand(T)
+                a_conv = convert(BinaryElem128, a)
+
+                if a != zero(T)
+                    @test inv(a_conv) == convert(BinaryElem128, inv(a))
+                end
+            end
+        end
+    end
+
 end
