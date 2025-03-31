@@ -128,9 +128,16 @@ function ^(a::T, n::U) where {T <: BinaryElem, U <: Integer}
     return t
 end
 
+
+# beta is given as a root of F_2^m irreducible polynomial in F_2^128
+# : beta = Fm.polynomial().roots(Fn, multiplicities=False)[0]
 @generated function betas(::Type{T}) where T <: Union{BinaryElem16, BinaryElem32}
     bsize = bitsize(T)
-    beta = (BinaryElem128(BinaryPoly128(2)))^div(BigInt(2)^128 - 1, 2^bsize - 1)
+    if T == BinaryElem16
+        beta = BinaryElem128(UInt128(44320122245670141922313918651005395719))
+    elseif T == BinaryElem32
+        beta = BinaryElem128(UInt128(23246355947528323030879441634950214446))
+    end
     bs = Vector{BinaryElem128}(undef, bsize)
     bs[1] = BinaryElem128(1)
 
