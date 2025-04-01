@@ -3,7 +3,10 @@ module MerkleTree
 using SHA
 
 export build_merkle_tree, get_root, get_depth
-export create_proof, verify_proof
+export CompleteMerkleTree, MerkleRoot, BatchedMerkleProof
+export prove, verify
+
+# XXX: make all proofs into reasonable objects with good ergonomics
 
 # for now simply assume that isbitstype(T) = true
 hash_leaf(leaf) = sha256(reinterpret(UInt8, leaf))
@@ -19,6 +22,10 @@ end
 
 function is_power_of_two(n::Int)
     return n > 0 && (n & (n - 1)) == 0
+end
+
+struct CompleteMerkleTree
+    tree::Vector{Vector{String}}
 end
 
 function build_merkle_tree(leaves)
@@ -46,16 +53,16 @@ function build_merkle_tree(leaves)
         current_layer = next_layer
     end
 
-    return tree
+    return CompleteMerkleTree(tree)
 end
 
-function get_root(tree)
-    return isempty(tree) ? "" : tree[end][1]
+struct MerkleRoot
+    root::Union{String, Nothing}
 end
 
-function get_depth(tree)
-    return length(tree) - 1
-end
+sizeof(x::MerkleRoot) = sizeof(x.root)
+get_root(c::CompleteMerkleTree) = MerkleRoot(isempty(c.tree) ? nothing : c.tree[end][1])
+get_depth(c::CompleteMerkleTree) = length(c.tree) - 1
 
 function ith_layer!(current_layer, queries_len, queries, proof)
     next_queries_len = 0
@@ -89,19 +96,25 @@ function ith_layer!(current_layer, queries_len, queries, proof)
     return next_queries_len
 end
 
-function create_proof(tree_levels, queries)
+struct BatchedMerkleProof
+    proof::Vector{String}
+end
+
+sizeof(x::BatchedMerkleProof) = sizeof(x.proof)
+
+function prove(tree::CompleteMerkleTree, queries)
     proof = String[]
-    depth = length(tree_levels) - 1
+    depth = length(tree.tree) - 1
 
     queries_buff = copy(queries)
 
     queries_buff .-= 1
     queries_cnt = length(queries)
     for i in 1:depth
-        queries_cnt = ith_layer!(tree_levels[i], queries_cnt, queries_buff, proof)
+        queries_cnt = ith_layer!(tree.tree[i], queries_cnt, queries_buff, proof)
     end
 
-    return proof
+    return BatchedMerkleProof(proof)
 end
 
 function verify_ith_layer!(layer, queries, curr_cnt, proof, proof_cnt)
@@ -147,10 +160,10 @@ function verify_ith_layer!(layer, queries, curr_cnt, proof, proof_cnt)
     return (next_cnt, proof_cnt)
 end
 
-function verify_proof(root, depth, leaves, leaf_queries, batched_proof)
-    proof = copy(batched_proof)
+function verify(root::MerkleRoot, batched_proof::BatchedMerkleProof; depth, leaves, leaf_indices)
+    proof = copy(batched_proof.proof)
     layer = [bytes2hex(hash_leaf(leaf)) for leaf in leaves]
-    queries = copy(leaf_queries)
+    queries = copy(leaf_indices)
 
     queries .-= 1
 
@@ -161,7 +174,7 @@ function verify_proof(root, depth, leaves, leaf_queries, batched_proof)
         (curr_cnt, proof_cnt) = verify_ith_layer!(layer, queries, curr_cnt, proof, proof_cnt)
     end
 
-    return layer[1] == root
+    return layer[1] == root.root
 end
 
 end # module MerkleTree
