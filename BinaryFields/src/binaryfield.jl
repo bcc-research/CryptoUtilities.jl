@@ -2,7 +2,7 @@
 # in this particular case likely due to (in this case unnecessary) type safety
 # checks
 
-abstract type BinaryElem <: Number end
+abstract type BinaryElem end
 
 poly(x::T) where T <: BinaryElem = x.poly
 poly_type(::Type{T}) where T <: BinaryElem = fieldtypes(T)[1]

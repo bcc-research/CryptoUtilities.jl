@@ -2,12 +2,12 @@
 abstract type BinaryPoly end
 
 # Generic stuff
-Base.zero(::T) where {T<:BinaryPoly} = T(0)
-Base.zero(::Type{T}) where {T<:BinaryPoly} = T(0)
-Base.one(::T) where {T<:BinaryPoly} = T(1)
-Base.one(::Type{T}) where {T<:BinaryPoly} = T(1)
-Base.transpose(x::T) where {T<:BinaryPoly} = x
-Base.adjoint(x::T) where {T<:BinaryPoly} = x
+Base.zero(::T) where T<:BinaryPoly = T(0)
+Base.zero(::Type{T}) where T<:BinaryPoly = T(0)
+Base.one(::T) where T<:BinaryPoly = T(1)
+Base.one(::Type{T}) where T<:BinaryPoly = T(1)
+Base.transpose(x::T) where T<:BinaryPoly = x
+Base.adjoint(x::T) where T<:BinaryPoly = x
 
 macro define_binary_poly(uint_size)
     gf2_elem_type = Symbol("BinaryPoly$(uint_size)")
@@ -40,7 +40,7 @@ Random.rand(rng::Random.AbstractRNG, ::Random.SamplerType{T}) where {T<:BinaryPo
 
 Base.convert(::Type{T}, v::U) where {T<:BinaryPoly,U<:BinaryPoly} = T(binary_val(v))
 Base.convert(::Type{BinaryPoly256}, v::NTuple{2, BinaryPoly128}) = T(binary_val.(v))
-Base.convert(::Type{T}, x) where {T<:BinaryPoly} = T(x)
+Base.convert(::Type{T}, x) where T<:BinaryPoly = T(x)
 
 +(a::T, b::T) where {T<:BinaryPoly} = T(binary_val(a) ⊻ binary_val(b))
 
@@ -52,7 +52,7 @@ function join(a::T, b::T) where {T <: BinaryPoly}
     T_double = double_type(T)
 
     a_double = convert(T_double, a)
-    a_double <<= sizeof(primitive_type(T)) * 8
+    a_double <<= bitsize(T)
     b_double = convert(T_double, b)
 
     return a_double + b_double
@@ -134,9 +134,9 @@ function *(a::BinaryPoly128, b::BinaryPoly128)
 end
 
 function *(a::T, b::T) where {T <: Union{BinaryPoly8, BinaryPoly16, BinaryPoly32}}
-    res = convert(BinaryPoly64, a) * convert(BinaryPoly64, b)
+    res = saturate(BinaryPoly64, a) * saturate(BinaryPoly64, b)
 
-    return convert(double_type(T), res)
+    return saturate(double_type(T), res)
 end
 
 # Computes the divisor and remainder of a / b
@@ -146,7 +146,7 @@ function divrem(a::T, b::T) where {T <: BinaryPoly}
     shift = leading_zeros(binary_val(b))
     q = T(0)
 
-    bit_post = T(1) << (sizeof(primitive_type(T)) * 8 - 1)
+    bit_post = T(1) << (bitsize(T) - 1)
     bit_post_div = T(1) << shift
     b = b << shift
 
