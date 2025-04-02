@@ -2,7 +2,7 @@
 # in this particular case likely due to (in this case unnecessary) type safety
 # checks
 
-abstract type BinaryElem end
+abstract type BinaryElem <: Number end
 
 poly(x::T) where T <: BinaryElem = x.poly
 poly_type(::Type{T}) where T <: BinaryElem = fieldtypes(T)[1]
@@ -15,6 +15,7 @@ Base.one(::T) where T <: BinaryElem = T(1)
 Base.one(::Type{T}) where T <: BinaryElem = T(1)
 Base.transpose(x::T) where T <: BinaryElem = x
 Base.adjoint(x::T) where T <: BinaryElem = x
+Base.conj(x::T) where T <: BinaryElem = x
 Random.rand(rng::Random.AbstractRNG, ::Random.SamplerType{T}) where T <: BinaryElem = T(rand(rng, poly_type(T)))
 
 macro define_binary_elem(uint_size)

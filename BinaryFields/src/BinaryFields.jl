@@ -1,7 +1,7 @@
 module BinaryFields
 
 using SIMD, Random
-import Base: +, *, zero, one, transpose, adjoint, inv, <<, >>, convert, length, reinterpret, ^, convert, promote_rule
+import Base: +, *, zero, one, transpose, adjoint, inv, <<, >>, convert, length, reinterpret, ^, convert, promote_rule, conj
 
 export BinaryPoly16, BinaryPoly32, BinaryPoly64, BinaryPoly128
 export BinaryElem, BinaryElem16, BinaryElem32, BinaryElem128
