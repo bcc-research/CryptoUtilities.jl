@@ -1,6 +1,7 @@
 module MerkleTree
 
 using SHA
+import Base: sizeof
 
 export build_merkle_tree, get_root, get_depth
 export CompleteMerkleTree, MerkleRoot, BatchedMerkleProof
