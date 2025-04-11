@@ -96,11 +96,14 @@ function ith_layer!(current_layer, queries_len, queries, proof)
     return next_queries_len
 end
 
+# XXX: should fix to have Vector{UInt8} instead of String
+# to save space
 struct BatchedMerkleProof
     proof::Vector{String}
 end
 
-sizeof(x::BatchedMerkleProof) = sizeof(x.proof)
+# Fix this once above is fixed
+sizeof(x::BatchedMerkleProof) = sizeof(length(x.proof)*div(256, 8))
 
 function prove(tree::CompleteMerkleTree, queries)
     proof = String[]
