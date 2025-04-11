@@ -2,6 +2,8 @@ module BinaryReedSolomon
 
 using BinaryFields
 
+import Base: length, iterate
+
 # Utility functions
 is_pow_2(n) = 2^(round(Int, log2(n))) == n
 

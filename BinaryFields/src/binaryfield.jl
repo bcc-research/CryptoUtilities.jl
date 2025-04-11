@@ -159,7 +159,7 @@ function convert(::Type{BinaryElem128}, x::T) where T <: Union{BinaryElem16, Bin
     bs = betas(T)
     x_bits = binary_val(x)
 
-    for i in 1:bitsize(T)
+    @inbounds for i in 1:bitsize(T)
         if (x_bits >> (i-1)) & 1 == 1
             result += bs[i]
         end

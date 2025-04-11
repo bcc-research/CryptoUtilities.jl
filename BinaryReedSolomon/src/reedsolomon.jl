@@ -12,6 +12,10 @@ mutable struct ReedSolomonEncoding{T <: BinaryElem}
     end
 end
 
+length(::ReedSolomonEncoding) = 1
+iterate(rs::ReedSolomonEncoding) = (rs,nothing)
+iterate(::ReedSolomonEncoding, ::Any) = nothing
+
 log_message_length(rs::ReedSolomonEncoding) = rs.log_message_length
 message_length(rs::ReedSolomonEncoding) = 2^log_message_length(rs)
 
