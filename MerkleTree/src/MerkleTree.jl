@@ -13,20 +13,20 @@ export prove, verify
 hash_leaf(leaf) = sha256(reinterpret(UInt8, leaf))
 hash_siblings(left_hash::Vector{UInt8}, right_hash::Vector{UInt8}) = sha256(vcat(left_hash, right_hash))
 
-function hash_siblings_hex(left_hash::String, right_hash::String)
-    left_bytes = hex2bytes(left_hash)
-    right_bytes = hex2bytes(right_hash)
+# function hash_siblings_hex(left_hash::String, right_hash::String)
+#     left_bytes = hex2bytes(left_hash)
+#     right_bytes = hex2bytes(right_hash)
     
-    hash_bytes = sha256(vcat(left_bytes, right_bytes))
-    return bytes2hex(hash_bytes)
-end
+#     hash_bytes = sha256(vcat(left_bytes, right_bytes))
+#     return bytes2hex(hash_bytes)
+# end
 
 function is_power_of_two(n::Int)
     return n > 0 && (n & (n - 1)) == 0
 end
 
 struct CompleteMerkleTree
-    tree::Vector{Vector{String}}
+    tree::Vector{Vector{Vector{UInt8}}}
 end
 
 function build_merkle_tree(leaves)
@@ -36,7 +36,7 @@ function build_merkle_tree(leaves)
     end
 
     current_layer = [hash_leaf(leaf) for leaf in leaves]
-    tree = [[bytes2hex(leaf) for leaf in current_layer]]
+    tree = [current_layer]
 
     while length(current_layer) > 1
         next_layer_size = length(current_layer) ÷ 2
@@ -50,7 +50,7 @@ function build_merkle_tree(leaves)
             cnt += 1
         end
 
-        push!(tree, [bytes2hex(node) for node in next_layer])
+        push!(tree, next_layer)
         current_layer = next_layer
     end
 
@@ -58,7 +58,7 @@ function build_merkle_tree(leaves)
 end
 
 struct MerkleRoot
-    root::Union{String, Nothing}
+    root::Union{Vector{UInt8}, Nothing}
 end
 
 sizeof(x::MerkleRoot) = sizeof(x.root)
@@ -97,17 +97,14 @@ function ith_layer!(current_layer, queries_len, queries, proof)
     return next_queries_len
 end
 
-# XXX: should fix to have Vector{UInt8} instead of String
-# to save space
 struct BatchedMerkleProof
-    proof::Vector{String}
+    proof::Vector{Vector{UInt8}}
 end
 
-# Fix this once above is fixed
-sizeof(x::BatchedMerkleProof) = length(x.proof)*div(256, 8)
+sizeof(x::BatchedMerkleProof) = sum(length, x.proof)
 
 function prove(tree::CompleteMerkleTree, queries)
-    proof = String[]
+    proof = Vector{Vector{UInt8}}()
     depth = length(tree.tree) - 1
 
     queries_buff = copy(queries)
@@ -136,9 +133,9 @@ function verify_ith_layer!(layer, queries, curr_cnt, proof, proof_cnt)
             proof_cnt += 1
             pp = proof[proof_cnt]
             if query % 2 != 0
-                layer[next_cnt] = hash_siblings_hex(pp, layer[i])
+                layer[next_cnt] = hash_siblings(pp, layer[i])
             else
-                layer[next_cnt] = hash_siblings_hex(layer[i], pp)
+                layer[next_cnt] = hash_siblings(layer[i], pp)
             end
             break
         end
@@ -146,16 +143,16 @@ function verify_ith_layer!(layer, queries, curr_cnt, proof, proof_cnt)
         if query % 2 != 0
             proof_cnt += 1
             pp = proof[proof_cnt]
-            layer[next_cnt] = hash_siblings_hex(pp, layer[i])
+            layer[next_cnt] = hash_siblings(pp, layer[i])
             i += 1
         else
             if queries[i + 1] != sibling
                 proof_cnt += 1
                 pp = proof[proof_cnt]
-                layer[next_cnt] = hash_siblings_hex(layer[i], pp)
+                layer[next_cnt] = hash_siblings(layer[i], pp)
                 i += 1
             else
-                layer[next_cnt] = hash_siblings_hex(layer[i], layer[i + 1])
+                layer[next_cnt] = hash_siblings(layer[i], layer[i + 1])
                 i += 2
             end
         end
@@ -165,8 +162,12 @@ function verify_ith_layer!(layer, queries, curr_cnt, proof, proof_cnt)
 end
 
 function verify(root::MerkleRoot, batched_proof::BatchedMerkleProof; depth, leaves, leaf_indices)
+    if root.root === nothing
+        return false
+    end
+    
     proof = copy(batched_proof.proof)
-    layer = [bytes2hex(hash_leaf(leaf)) for leaf in leaves]
+    layer = [hash_leaf(leaf) for leaf in leaves]
     queries = copy(leaf_indices)
 
     queries .-= 1
