@@ -103,7 +103,7 @@ struct BatchedMerkleProof
 end
 
 # Fix this once above is fixed
-sizeof(x::BatchedMerkleProof) = sizeof(length(x.proof)*div(256, 8))
+sizeof(x::BatchedMerkleProof) = length(x.proof)*div(256, 8)
 
 function prove(tree::CompleteMerkleTree, queries)
     proof = String[]
