@@ -66,16 +66,6 @@ tree = build_merkle_tree(leaves)
 root = get_root(tree)
 ```
 
-### Ligero Protocol
-
-```julia
-using Ligero
-
-poly = rand(BinaryElem16, 2^10)
-comm = commit(poly)
-proof = prove(comm, rand(BinaryElem128, size(matrix(comm), 2)), [1, 2, 3])
-```
-
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](./LICENSE) file for details.
