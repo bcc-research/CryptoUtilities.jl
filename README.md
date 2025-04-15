@@ -32,7 +32,7 @@ We provide examples and walkthroughs of the package (along with some Julia
 basics) as [Pluto.jl](https://plutojl.org) notebooks in the
 [CryptoUtilitiesNotebooks](https://github.com/bcc-research/CryptoUtilitiesNotebooks)
 repository. We _highly_ recommend reading those, which should be all you need to
-get started using this library. We also provide some (very basic) exmaples below, for
+get started using this library. We also provide some (very basic) examples below, for
 completeness.
 
 ### Binary Fields
