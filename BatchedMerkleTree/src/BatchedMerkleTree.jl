@@ -1,4 +1,4 @@
-module MerkleTree
+module BatchedMerkleTree
 
 using SHA
 import Base: sizeof
