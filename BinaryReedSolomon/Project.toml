@@ -7,4 +7,5 @@ version = "0.1.0"
 BinaryFields = "0fee9d7f-8397-4f0d-9ec6-117db1666467"
 
 [compat]
-BinaryFields = "0.1.0"
+julia = "1.6"
+version = "0.1.0"
