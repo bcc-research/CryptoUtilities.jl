@@ -2,11 +2,14 @@
 
 julia_version = "1.11.2"
 manifest_format = "2.0"
-project_hash = "19397f771ffd4b66580d5c82746e9fc918884527"
+project_hash = "a51e7c37231f2b9675c4be996e40ba01235c4935"
 
 [[deps.BinaryFields]]
 deps = ["Random", "SIMD"]
-path = "../BinaryFields"
+git-tree-sha1 = "58b20487405fd96c6b7cb06fc448a1dda976e933"
+repo-rev = "main"
+repo-subdir = "BinaryFields"
+repo-url = "https://github.com/bcc-research/CryptoUtilities.jl.git"
 uuid = "0fee9d7f-8397-4f0d-9ec6-117db1666467"
 version = "0.1.0"
 
