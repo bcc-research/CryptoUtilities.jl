@@ -19,7 +19,7 @@ using Pkg
 Pkg.add("https://github.com/bcc-research/CryptoUtilities.jl.git", subdir="BinaryFields")
 ```
 Replace `subdir="BinaryFields"` with `subdir="BinaryReedSolomon"` or
-`subdir="MerkleTree"` to install the other packages.
+`subdir="BatchedMerkleTree"` to install the other packages.
 
 (We are working on adding the packages to the Julia package registry, but for
 now, you can install them directly from the GitHub repository.)
@@ -59,7 +59,7 @@ encoded = encode(rs, message)
 ### Merkle Trees
 
 ```julia
-using MerkleTree
+using BatchedMerkleTree
 
 leaves = [rand(UInt16, 4) for _ in 1:16]
 tree = build_merkle_tree(leaves)
