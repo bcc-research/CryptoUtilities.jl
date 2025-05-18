@@ -182,4 +182,4 @@ function verify(root::MerkleRoot, batched_proof::BatchedMerkleProof; depth, leav
     return layer[1] == root.root
 end
 
-end # module MerkleTree
+end # module BatchedMerkleTree

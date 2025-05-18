@@ -22,4 +22,14 @@ end
     root = get_root(tree)
 
     @test verify(root, proof; depth, leaves=queried_leaves, leaf_indices=queries)
+
+    # Tamper with one of the queried leaves and ensure verification fails
+    corrupted_leaves = copy(queried_leaves)
+    corrupted_leaves[1] = rand(UInt16, K)
+    @test !verify(root, proof; depth, leaves=corrupted_leaves, leaf_indices=queries)
+
+    # Tamper with the proof itself and ensure verification fails
+    corrupted_proof = BatchedMerkleProof(copy(proof.proof))
+    corrupted_proof.proof[1] = rand(UInt8, length(corrupted_proof.proof[1]))
+    @test !verify(root, corrupted_proof; depth, leaves=queried_leaves, leaf_indices=queries)
 end
