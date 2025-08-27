@@ -12,17 +12,16 @@ encodings, and Merkle trees with multiopening proofs.
 
 ## Installation
 
-To use `BinaryFields` or any of the other packages, simply add the package to your Julia environment:
+The packages in this repository are registered in the Julia package registry. To
+use `BinaryFields` or any of the other packages, simply add them by name:
 
 ```julia
 using Pkg
-Pkg.add("https://github.com/bcc-research/CryptoUtilities.jl.git", subdir="BinaryFields")
+Pkg.add("BinaryFields")
 ```
-Replace `subdir="BinaryFields"` with `subdir="BinaryReedSolomon"` or
-`subdir="BatchedMerkleTree"` to install the other packages.
 
-(We are working on adding the packages to the Julia package registry, but for
-now, you can install them directly from the GitHub repository.)
+Replace `"BinaryFields"` with `"BinaryReedSolomon"` or `"BatchedMerkleTree"`
+to install the other packages.
 
 ## Usage
 
