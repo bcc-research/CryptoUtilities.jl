@@ -49,10 +49,12 @@ println(c)
 
 ```julia
 using BinaryReedSolomon
+using BinaryFields  # for BinaryElem16 type
 
 rs = reed_solomon(BinaryElem16, 256, 1024)
 message = rand(BinaryElem16, 256)
 encoded = encode(rs, message)
+println("Encoded length: ", length(encoded))
 ```
 
 ### Merkle Trees
@@ -63,9 +65,9 @@ using BatchedMerkleTree
 leaves = [rand(UInt16, 4) for _ in 1:16]
 tree = build_merkle_tree(leaves)
 root = get_root(tree)
+println("Root hash: ", bytes2hex(root))
 ```
 
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](./LICENSE) file for details.
-
