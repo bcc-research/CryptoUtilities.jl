@@ -120,3 +120,18 @@ end
     end
 
 end
+
+@testset "BinaryPoly divrem" begin
+    for T in [BinaryPoly16, BinaryPoly32]
+        for _ in 1:100
+            a = rand(T)
+            b = rand(T)
+            if binary_val(b) == 0
+                b = one(T)
+            end
+            q, r = BinaryFields.divrem(a, b)
+            @test q * b + r == a
+            @test BinaryFields.degree(r) < BinaryFields.degree(b) || binary_val(r) == 0
+        end
+    end
+end
