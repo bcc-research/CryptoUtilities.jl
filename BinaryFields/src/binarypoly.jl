@@ -139,27 +139,28 @@ function *(a::T, b::T) where {T <: Union{BinaryPoly8, BinaryPoly16, BinaryPoly32
     return saturate(double_type(T), res)
 end
 
+# Compute the degree of the binary polynomial `x`.
+# Returns -1 for the zero polynomial.
+degree(x::T) where {T<:BinaryPoly} =
+    binary_val(x) == 0 ? -1 : bitsize(T) - leading_zeros(binary_val(x)) - 1
+
 # Computes the divisor and remainder of a / b
 function divrem(a::T, b::T) where {T <: BinaryPoly}
     @assert binary_val(b) != 0
 
-    shift = leading_zeros(binary_val(b))
+    n = degree(a)
+    m = degree(b)
+
+    if n < m
+        return T(0), a
+    end
+
     q = T(0)
-
-    bit_post = T(1) << (bitsize(T) - 1)
-    bit_post_div = T(1) << shift
-    b = b << shift
-
-    while shift >= 0
-        if (binary_val(a) & binary_val(bit_post)) != 0
-            q = q + bit_post_div
-            a = a + b
-        end
-        shift -= 1
-
-        b >>= 1
-        bit_post >>= 1
-        bit_post_div >>= 1
+    while n >= m && binary_val(a) != 0
+        shift = n - m
+        q += T(1) << shift
+        a += b << shift
+        n = degree(a)
     end
 
     return q, a
